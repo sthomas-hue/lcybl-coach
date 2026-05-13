@@ -2390,25 +2390,41 @@ function setupImport(e) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (ev) => {
+    let d;
+    try { d = JSON.parse(ev.target.result); }
+    catch(err) { alert('Could not parse file — make sure it\'s the JSON backup exported from LCYBL Coach.'); return; }
+
     try {
-      const d = JSON.parse(ev.target.result);
-      if (d.teams && Array.isArray(d.teams)) {
-        APP = d;
-        APP.teams.forEach(t => {
-          if (!t.baseline) t.baseline = {};
-          if (!t.logo) t.logo = '';
-          if (!t.colors) t.colors = { primary: '#e4002b', secondary: '#ffffff' };
-          Object.defineProperty(t, 'team', { get() { return { name:this.name, division:this.division, season:this.season }; }, configurable:true });
-        });
+      if (d.teams && Array.isArray(d.teams) && d.teams.length) {
+        APP = { currentTeamId: d.currentTeamId, teams: d.teams };
       } else if (d.players) {
         const t = { id:uid(), name:d.team?.name||'Imported Team', division:d.team?.division||'12U Sec 1',
-          season:d.team?.season||'2026', players:d.players||[], games:d.games||[], baseline:d.baseline||{},
-          logo:'', colors:{ primary:'#e4002b', secondary:'#ffffff' } };
-        Object.defineProperty(t, 'team', { get() { return { name:this.name, division:this.division, season:this.season }; }, configurable:true });
+          season:d.team?.season||'2026', players:d.players||[], games:d.games||[], baseline:d.baseline||{} };
         APP = { currentTeamId: t.id, teams: [t] };
       } else {
-        alert('Unrecognised backup file.'); return;
+        alert('Unrecognised backup file — no teams or players found.'); return;
       }
+
+      // Backfill missing fields on every team
+      APP.teams.forEach(t => {
+        if (!t.baseline) t.baseline = {};
+        if (!t.logo)     t.logo     = '';
+        if (!t.colors)   t.colors   = { primary: '#e4002b', secondary: '#ffffff' };
+        if (!t.players)  t.players  = [];
+        if (!t.games)    t.games    = [];
+        // Backfill missing fields on every player
+        t.players.forEach(p => {
+          if (!p.batting)  p.batting  = { ab:0,h:0,doubles:0,triples:0,hr:0,r:0,rbi:0,bb:0,k:0,kl:0,hbp:0,sac:0,sf:0,roe:0,fc:0,sb:0,cs:0,pik:0 };
+          if (!p.pitching) p.pitching = { appearances:0,gs:0,ip:0,bf:0,h:0,r:0,er:0,bb:0,k:0,kl:0,hbp:0,lob:0,bk:0,cs:0,sb:0,wp:0,pitches:0 };
+          if (!p.fielding) p.fielding = { po:0,a:0,e:0 };
+          if (!p.pitchLog) p.pitchLog = [];
+          if (!p.positions) p.positions = [];
+        });
+        Object.defineProperty(t, 'team', { get() { return { name:this.name, division:this.division, season:this.season }; }, configurable:true });
+      });
+    } catch(err) { alert('Error loading backup data: ' + err.message); return; }
+
+    try {
       S = APP.teams.find(t => t.id === APP.currentTeamId) || APP.teams[0];
       APP.currentTeamId = S.id;
       save();
@@ -2419,7 +2435,7 @@ function setupImport(e) {
       renderTeamSwitcher();
       updateHeader();
       renderDashboard();
-    } catch(err) { alert('Could not read file — make sure it\'s a valid LCYBL backup.'); }
+    } catch(err) { alert('Import loaded but error rendering app: ' + err.message); }
   };
   reader.readAsText(file);
 }
