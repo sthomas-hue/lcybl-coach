@@ -579,9 +579,9 @@ main{padding:16px;max-width:860px;margin:0 auto}
         </div>
         <div id="ss-bat-panel">
           <div class="scroll-x">
-            <table class="tbl" id="ss-bat-tbl" style="min-width:700px">
+            <table class="tbl" id="ss-bat-tbl" style="min-width:1200px">
               <thead><tr>
-                <th style="min-width:120px">Player</th>
+                <th style="min-width:130px">Player</th>
                 <th class="num" title="At Bats">AB</th>
                 <th class="num" title="Hits">H</th>
                 <th class="num" title="Doubles">2B</th>
@@ -591,11 +591,23 @@ main{padding:16px;max-width:860px;margin:0 auto}
                 <th class="num" title="Runs Batted In">RBI</th>
                 <th class="num" title="Walks">BB</th>
                 <th class="num" title="Strikeouts">K</th>
+                <th class="num" title="Strikeout Looking">K-L</th>
                 <th class="num" title="Hit By Pitch">HBP</th>
-                <th class="num" title="Sacrifice">SAC</th>
-                <th class="num" style="color:var(--accent)" title="Batting Average">BA</th>
+                <th class="num" title="Sacrifice Bunt">SAC</th>
+                <th class="num" title="Sacrifice Fly">SF</th>
+                <th class="num" title="Reached on Error">ROE</th>
+                <th class="num" title="Fielder's Choice">FC</th>
+                <th class="num" title="Stolen Bases">SB</th>
+                <th class="num" title="Caught Stealing">CS</th>
+                <th class="num" title="Picked Off">PIK</th>
+                <th class="num" style="color:var(--accent);border-left:1px solid var(--border)" title="Games Played">GP</th>
+                <th class="num" style="color:var(--accent)" title="Plate Appearances">PA</th>
+                <th class="num" style="color:var(--accent)" title="Singles">1B</th>
+                <th class="num" style="color:var(--accent)" title="Batting Average">AVG</th>
                 <th class="num" style="color:var(--accent)" title="On-Base Percentage">OBP</th>
-                <th class="num" style="color:var(--accent)" title="On-Base Plus Slugging">OPS</th>
+                <th class="num" style="color:var(--accent)" title="Slugging Percentage">SLG</th>
+                <th class="num" style="color:var(--accent);font-weight:800" title="On-Base Plus Slugging">OPS</th>
+                <th class="num" style="color:var(--accent)" title="Stolen Base Percentage">SB%</th>
               </tr></thead>
               <tbody id="ss-bat-body"></tbody>
             </table>
@@ -838,17 +850,32 @@ function pitchStatus(player, gameDate) {
 // STATS / ANALYTICS ENGINE
 // ============================================================
 function calcBatting(b) {
-  const pa = (b.ab || 0) + (b.bb || 0) + (b.hbp || 0) + (b.sac || 0);
-  const ab = b.ab || 0;
-  const h  = b.h  || 0;
-  const s  = h - (b.doubles||0) - (b.triples||0) - (b.hr||0);
-  const tb = s + 2*(b.doubles||0) + 3*(b.triples||0) + 4*(b.hr||0);
+  const ab  = b.ab  || 0;
+  const h   = b.h   || 0;
+  const bb  = b.bb  || 0;
+  const hbp = b.hbp || 0;
+  const sac = b.sac || 0;
+  const sf  = b.sf  || 0;
+  const roe = b.roe || 0;
+  const fc  = b.fc  || 0;
+  const sb  = b.sb  || 0;
+  const cs  = b.cs  || 0;
+  const d2  = b.doubles || 0;
+  const d3  = b.triples || 0;
+  const hr  = b.hr  || 0;
+  // PA = all trips to the plate
+  const pa  = ab + bb + hbp + sac + sf + roe + fc;
+  const singles = Math.max(0, h - d2 - d3 - hr);
+  const tb  = singles + 2*d2 + 3*d3 + 4*hr;
   const ba  = ab > 0 ? h/ab : 0;
-  const obp = pa > 0 ? (h + (b.bb||0) + (b.hbp||0)) / pa : 0;
+  // OBP denominator excludes SAC, ROE, FC per official rules
+  const obpDen = ab + bb + hbp + sf;
+  const obp = obpDen > 0 ? (h + bb + hbp) / obpDen : 0;
   const slg = ab > 0 ? tb/ab : 0;
   const ops = obp + slg;
-  const kpct = pa > 0 ? (b.k||0)/pa : 0;
-  return { pa, ba, obp, slg, ops, kpct, tb };
+  const kpct  = pa > 0 ? (b.k||0)/pa : 0;
+  const sbpct = (sb + cs) > 0 ? sb/(sb+cs) : 0;
+  return { pa, ba, obp, slg, ops, kpct, tb, singles, sbpct, sb, cs };
 }
 
 function calcPitching(p) {
@@ -1346,7 +1373,7 @@ function savePlayer() {
     S.players.push({
       id:uid(), name, jersey, age,
       positions:[...pmPositions],
-      batting:{ ab:0,h:0,doubles:0,triples:0,hr:0,r:0,rbi:0,bb:0,k:0,hbp:0,sac:0 },
+      batting:{ ab:0,h:0,doubles:0,triples:0,hr:0,r:0,rbi:0,bb:0,k:0,kl:0,hbp:0,sac:0,sf:0,roe:0,fc:0,sb:0,cs:0,pik:0 },
       pitching:{ appearances:0,ip:0,bf:0,h:0,er:0,bb:0,k:0,pitches:0 },
       fielding:{ po:0,a:0,e:0 },
       pitchLog:[]
@@ -1488,7 +1515,24 @@ function openStatsModal(gameId) {
         <div style="display:none">
           <div style="padding:4px 14px 2px;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase">Batting</div>
           <div class="stat-grid-inner">
-            ${statCell('ab','AB',eb.ab,p.id,'b')} ${statCell('h','H',eb.h,p.id,'b')} ${statCell('doubles','2B',eb.doubles,p.id,'b')} ${statCell('triples','3B',eb.triples,p.id,'b')} ${statCell('hr','HR',eb.hr,p.id,'b')} ${statCell('r','R',eb.r,p.id,'b')} ${statCell('rbi','RBI',eb.rbi,p.id,'b')} ${statCell('bb','BB',eb.bb,p.id,'b')} ${statCell('k','K',eb.k,p.id,'b')} ${statCell('hbp','HBP',eb.hbp,p.id,'b')} ${statCell('sac','SAC',eb.sac,p.id,'b')}
+            ${statCell('ab','AB',eb.ab,p.id,'b')}
+            ${statCell('h','H',eb.h,p.id,'b')}
+            ${statCell('doubles','2B',eb.doubles,p.id,'b')}
+            ${statCell('triples','3B',eb.triples,p.id,'b')}
+            ${statCell('hr','HR',eb.hr,p.id,'b')}
+            ${statCell('rbi','RBI',eb.rbi,p.id,'b')}
+            ${statCell('r','R',eb.r,p.id,'b')}
+            ${statCell('bb','BB',eb.bb,p.id,'b')}
+            ${statCell('k','SO',eb.k,p.id,'b')}
+            ${statCell('kl','K-L',eb.kl,p.id,'b')}
+            ${statCell('hbp','HBP',eb.hbp,p.id,'b')}
+            ${statCell('sac','SAC',eb.sac,p.id,'b')}
+            ${statCell('sf','SF',eb.sf,p.id,'b')}
+            ${statCell('roe','ROE',eb.roe,p.id,'b')}
+            ${statCell('fc','FC',eb.fc,p.id,'b')}
+            ${statCell('sb','SB',eb.sb,p.id,'b')}
+            ${statCell('cs','CS',eb.cs,p.id,'b')}
+            ${statCell('pik','PIK',eb.pik,p.id,'b')}
           </div>
           ${isPitcher ? `
           <div style="padding:4px 14px 2px;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase">Pitching</div>
@@ -1541,7 +1585,7 @@ function saveStats() {
 // Recompute every player's season totals by summing all game stats.
 // Called after any edit so totals are always correct regardless of order.
 function recomputeSeasonTotals() {
-  const BAT_KEYS = ['ab','h','doubles','triples','hr','r','rbi','bb','k','hbp','sac'];
+  const BAT_KEYS = ['ab','h','doubles','triples','hr','r','rbi','bb','k','kl','hbp','sac','sf','roe','fc','sb','cs','pik'];
   const PIT_KEYS = ['ip','bf','h','er','bb','k','pitches'];
   const FLD_KEYS = ['po','a','e'];
 
@@ -1852,21 +1896,32 @@ function ssLiveCalc(pid, type) {
     const bb  = ssGetInputVal(pid,'bat','bb');
     const hbp = ssGetInputVal(pid,'bat','hbp');
     const sac = ssGetInputVal(pid,'bat','sac');
+    const sf  = ssGetInputVal(pid,'bat','sf');
+    const roe = ssGetInputVal(pid,'bat','roe');
+    const fc  = ssGetInputVal(pid,'bat','fc');
+    const sb  = ssGetInputVal(pid,'bat','sb');
+    const cs  = ssGetInputVal(pid,'bat','cs');
     const db  = ssGetInputVal(pid,'bat','doubles');
     const tr  = ssGetInputVal(pid,'bat','triples');
     const hr  = ssGetInputVal(pid,'bat','hr');
-    const pa  = ab + bb + hbp + sac;
-    const tb  = (h - db - tr - hr) + 2*db + 3*tr + 4*hr;
-    const ba  = ab > 0 ? h/ab : 0;
-    const obp = pa > 0 ? (h+bb+hbp)/pa : 0;
-    const slg = ab > 0 ? tb/ab : 0;
-    const ops = obp + slg;
-    const c1 = document.getElementById(`ss-c1-${pid}`);
-    const c2 = document.getElementById(`ss-c2-${pid}`);
-    const c3 = document.getElementById(`ss-c3-${pid}`);
-    if (c1) c1.textContent = ab>=3 ? fmt(ba)  : '—';
-    if (c2) c2.textContent = ab>=3 ? fmt(obp) : '—';
-    if (c3) c3.textContent = ab>=3 ? fmt(ops) : '—';
+    const pa      = ab + bb + hbp + sac + sf + roe + fc;
+    const singles = Math.max(0, h - db - tr - hr);
+    const tb      = singles + 2*db + 3*tr + 4*hr;
+    const ba      = ab > 0 ? h/ab : 0;
+    const obpDen  = ab + bb + hbp + sf;
+    const obp     = obpDen > 0 ? (h+bb+hbp)/obpDen : 0;
+    const slg     = ab > 0 ? tb/ab : 0;
+    const ops     = obp + slg;
+    const sbpct   = (sb+cs) > 0 ? sb/(sb+cs) : null;
+    const ok = ab >= 3;
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set(`ss-pa-${pid}`,  pa);
+    set(`ss-1b-${pid}`,  singles);
+    set(`ss-avg-${pid}`, ok ? fmt(ba)   : '—');
+    set(`ss-obp-${pid}`, ok ? fmt(obp)  : '—');
+    set(`ss-slg-${pid}`, ok ? fmt(slg)  : '—');
+    set(`ss-ops-${pid}`, ok ? fmt(ops)  : '—');
+    set(`ss-sbp-${pid}`, sbpct !== null ? fmtPct(sbpct) : '—');
   } else {
     const ip   = ssGetInputVal(pid,'pit','ip');
     const er   = ssGetInputVal(pid,'pit','er');
@@ -1876,12 +1931,11 @@ function ssLiveCalc(pid, type) {
     const era  = ip > 0 ? (er/ip)*9 : 0;
     const whip = ip > 0 ? (h+bb)/ip  : 0;
     const k9   = ip > 0 ? (k/ip)*9   : 0;
-    const c1 = document.getElementById(`ss-c1-${pid}`);
-    const c2 = document.getElementById(`ss-c2-${pid}`);
-    const c3 = document.getElementById(`ss-c3-${pid}`);
-    if (c1) c1.textContent = ip>=1 ? fmt(era,2)  : '—';
-    if (c2) c2.textContent = ip>=1 ? fmt(whip,2) : '—';
-    if (c3) c3.textContent = ip>=1 ? fmt(k9,1)   : '—';
+    const ok = ip >= 1;
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set(`ss-era-${pid}`,  ok ? fmt(era,2)  : '—');
+    set(`ss-whip-${pid}`, ok ? fmt(whip,2) : '—');
+    set(`ss-k9-${pid}`,   ok ? fmt(k9,1)   : '—');
   }
 }
 
@@ -1889,16 +1943,20 @@ function renderSSBatting() {
   const tbody = document.getElementById('ss-bat-body');
   if (!tbody) return;
   if (!S.players.length) {
-    tbody.innerHTML = `<tr><td colspan="15" style="padding:24px;text-align:center;color:var(--muted)">Add players to your roster first</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="27" style="padding:24px;text-align:center;color:var(--muted)">Add players to your roster first</td></tr>`;
     return;
   }
   const rows = [...S.players].sort((a,b) => (a.jersey|0)-(b.jersey|0));
+  const ac = 'style="color:var(--accent)"';
+  const acb = 'style="color:var(--accent);font-weight:800"';
+  const bl2 = 'style="border-left:1px solid var(--border)"';
   tbody.innerHTML = rows.map(p => {
-    const bl     = (S.baseline[p.id] || {}).batting || {};
-    const totals = calcBatting(p.batting);
-    const ok     = totals.pa >= 3;
+    const bl  = (S.baseline[p.id] || {}).batting || {};
+    const t   = calcBatting(p.batting);
+    const gp  = S.games.filter(g => g.gameStats && g.gameStats[p.id] && (g.gameStats[p.id].batting?.ab || 0) > 0).length;
+    const ok  = (p.batting.ab || 0) >= 3;
     return `<tr>
-      <td style="font-weight:600;white-space:nowrap">#${p.jersey} ${p.name}</td>
+      <td style="font-weight:700;white-space:nowrap">#${p.jersey} ${p.name}</td>
       ${ssCell(p.id,'bat','ab',      bl.ab)}
       ${ssCell(p.id,'bat','h',       bl.h)}
       ${ssCell(p.id,'bat','doubles', bl.doubles)}
@@ -1908,11 +1966,23 @@ function renderSSBatting() {
       ${ssCell(p.id,'bat','rbi',     bl.rbi)}
       ${ssCell(p.id,'bat','bb',      bl.bb)}
       ${ssCell(p.id,'bat','k',       bl.k)}
+      ${ssCell(p.id,'bat','kl',      bl.kl)}
       ${ssCell(p.id,'bat','hbp',     bl.hbp)}
       ${ssCell(p.id,'bat','sac',     bl.sac)}
-      <td class="num" style="color:var(--accent)" id="ss-c1-${p.id}">${ok ? fmt(totals.ba)  : '—'}</td>
-      <td class="num" style="color:var(--accent)" id="ss-c2-${p.id}">${ok ? fmt(totals.obp) : '—'}</td>
-      <td class="num" style="color:var(--accent);font-weight:700" id="ss-c3-${p.id}">${ok ? fmt(totals.ops) : '—'}</td>
+      ${ssCell(p.id,'bat','sf',      bl.sf)}
+      ${ssCell(p.id,'bat','roe',     bl.roe)}
+      ${ssCell(p.id,'bat','fc',      bl.fc)}
+      ${ssCell(p.id,'bat','sb',      bl.sb)}
+      ${ssCell(p.id,'bat','cs',      bl.cs)}
+      ${ssCell(p.id,'bat','pik',     bl.pik)}
+      <td class="num" ${ac} ${bl2}>${gp}</td>
+      <td class="num" ${ac} id="ss-pa-${p.id}">${t.pa}</td>
+      <td class="num" ${ac} id="ss-1b-${p.id}">${t.singles}</td>
+      <td class="num" ${ac} id="ss-avg-${p.id}">${ok ? fmt(t.ba)  : '—'}</td>
+      <td class="num" ${ac} id="ss-obp-${p.id}">${ok ? fmt(t.obp) : '—'}</td>
+      <td class="num" ${ac} id="ss-slg-${p.id}">${ok ? fmt(t.slg) : '—'}</td>
+      <td class="num" ${acb} id="ss-ops-${p.id}">${ok ? fmt(t.ops) : '—'}</td>
+      <td class="num" ${ac} id="ss-sbp-${p.id}">${(t.sb+t.cs)>0 ? fmtPct(t.sbpct) : '—'}</td>
     </tr>`;
   }).join('');
 }
@@ -1927,13 +1997,15 @@ function renderSSPitching() {
     tbody.innerHTML = `<tr><td colspan="11" style="padding:24px;text-align:center;color:var(--muted)">No pitchers on roster — assign P position in Roster tab</td></tr>`;
     return;
   }
+  const ac  = 'style="color:var(--accent)"';
+  const acb = 'style="color:var(--accent);font-weight:800"';
+  const bl2 = 'style="border-left:1px solid var(--border)"';
   tbody.innerHTML = pitchers.map(p => {
-    const bl     = (S.baseline[p.id] || {}).pitching || {};
-    const totals = calcPitching(p.pitching);
-    const ip     = p.pitching.ip || 0;
-    const ok     = ip >= 1;
+    const bl  = (S.baseline[p.id] || {}).pitching || {};
+    const pit = calcPitching(p.pitching);
+    const ok  = (p.pitching.ip || 0) >= 1;
     return `<tr>
-      <td style="font-weight:600;white-space:nowrap">#${p.jersey} ${p.name}</td>
+      <td style="font-weight:700;white-space:nowrap">#${p.jersey} ${p.name}</td>
       ${ssCell(p.id,'pit','ip',      bl.ip)}
       ${ssCell(p.id,'pit','bf',      bl.bf)}
       ${ssCell(p.id,'pit','h',       bl.h)}
@@ -1941,9 +2013,9 @@ function renderSSPitching() {
       ${ssCell(p.id,'pit','bb',      bl.bb)}
       ${ssCell(p.id,'pit','k',       bl.k)}
       ${ssCell(p.id,'pit','pitches', bl.pitches)}
-      <td class="num" style="color:var(--accent)" id="ss-c1-${p.id}">${ok ? fmt(totals.era,2)  : '—'}</td>
-      <td class="num" style="color:var(--accent)" id="ss-c2-${p.id}">${ok ? fmt(totals.whip,2) : '—'}</td>
-      <td class="num" style="color:var(--accent);font-weight:700" id="ss-c3-${p.id}">${ok ? fmt(totals.k9,1) : '—'}</td>
+      <td class="num" ${acb} ${bl2} id="ss-era-${p.id}">${ok ? fmt(pit.era,2)  : '—'}</td>
+      <td class="num" ${ac}         id="ss-whip-${p.id}">${ok ? fmt(pit.whip,2) : '—'}</td>
+      <td class="num" ${ac}         id="ss-k9-${p.id}">${ok  ? fmt(pit.k9,1)   : '—'}</td>
     </tr>`;
   }).join('');
 }
@@ -1973,24 +2045,73 @@ function renderBattingTable() {
   const tbl = document.getElementById('tbl-batting');
   if (!S.players.length) { tbl.innerHTML=''; return; }
   const rows = S.players.map(p => {
-    const b = calcBatting(p.batting);
-    return { p, b };
-  }).sort((a,z)=>z.b.ops-a.b.ops);
+    const b  = calcBatting(p.batting);
+    const gp = S.games.filter(g => g.gameStats && g.gameStats[p.id] && (g.gameStats[p.id].batting?.ab||0) > 0).length;
+    return { p, b, gp };
+  }).sort((a,z) => z.b.ops - a.b.ops);
 
+  const ac  = 'style="color:var(--accent)"';
+  const acb = 'style="color:var(--accent);font-weight:800"';
   tbl.innerHTML = `<thead><tr>
-    <th>Player</th><th class="num">G</th><th class="num">AB</th><th class="num">H</th><th class="num">2B</th><th class="num">3B</th><th class="num">HR</th><th class="num">R</th><th class="num">RBI</th><th class="num">BB</th><th class="num">K</th><th class="num">HBP</th><th class="num">BA</th><th class="num">OBP</th><th class="num">SLG</th><th class="num hi">OPS</th><th class="num">K%</th>
-  </tr></thead><tbody>${rows.map(({p,b},idx)=>`<tr>
-    <td><b>#${p.jersey}</b> ${p.name}</td>
-    <td class="num">${S.games.filter(g=>g.gameStats&&g.gameStats[p.id]).length}</td>
-    <td class="num">${p.batting.ab||0}</td><td class="num">${p.batting.h||0}</td>
-    <td class="num">${p.batting.doubles||0}</td><td class="num">${p.batting.triples||0}</td><td class="num">${p.batting.hr||0}</td>
-    <td class="num">${p.batting.r||0}</td><td class="num">${p.batting.rbi||0}</td>
-    <td class="num">${p.batting.bb||0}</td><td class="num">${p.batting.k||0}</td><td class="num">${p.batting.hbp||0}</td>
-    <td class="num">${b.pa>=3?fmt(b.ba):'—'}</td><td class="num">${b.pa>=3?fmt(b.obp):'—'}</td>
-    <td class="num">${b.pa>=3?fmt(b.slg):'—'}</td>
-    <td class="num hi">${b.pa>=3?fmt(b.ops):'—'}</td>
-    <td class="num">${b.pa>=3?fmtPct(b.kpct):'—'}</td>
-  </tr>`).join('')}</tbody>`;
+    <th>Player</th>
+    <th class="num" ${ac} title="Games Played">GP</th>
+    <th class="num" ${ac} title="Plate Appearances">PA</th>
+    <th class="num" title="At Bats">AB</th>
+    <th class="num" ${ac} title="Batting Average">AVG</th>
+    <th class="num" ${ac} title="On-Base Percentage">OBP</th>
+    <th class="num" ${acb} title="On-Base Plus Slugging">OPS</th>
+    <th class="num" ${ac} title="Slugging Percentage">SLG</th>
+    <th class="num" title="Hits">H</th>
+    <th class="num" ${ac} title="Singles">1B</th>
+    <th class="num" title="Doubles">2B</th>
+    <th class="num" title="Triples">3B</th>
+    <th class="num" title="Home Runs">HR</th>
+    <th class="num" title="Runs Batted In">RBI</th>
+    <th class="num" title="Runs">R</th>
+    <th class="num" title="Walks">BB</th>
+    <th class="num" title="Strikeouts">SO</th>
+    <th class="num" title="Strikeout Looking">K-L</th>
+    <th class="num" title="Hit By Pitch">HBP</th>
+    <th class="num" title="Sacrifice Bunt">SAC</th>
+    <th class="num" title="Sacrifice Fly">SF</th>
+    <th class="num" title="Reached on Error">ROE</th>
+    <th class="num" title="Fielder's Choice">FC</th>
+    <th class="num" title="Stolen Bases">SB</th>
+    <th class="num" ${ac} title="Stolen Base Percentage">SB%</th>
+    <th class="num" title="Caught Stealing">CS</th>
+    <th class="num" title="Picked Off">PIK</th>
+  </tr></thead><tbody>${rows.map(({p,b,gp}) => {
+    const ok = (p.batting.ab||0) >= 3;
+    return `<tr>
+      <td><b>#${p.jersey}</b> ${p.name}</td>
+      <td class="num" ${ac}>${gp}</td>
+      <td class="num" ${ac}>${b.pa}</td>
+      <td class="num">${p.batting.ab||0}</td>
+      <td class="num" ${ac}>${ok?fmt(b.ba):'—'}</td>
+      <td class="num" ${ac}>${ok?fmt(b.obp):'—'}</td>
+      <td class="num hi" ${acb}>${ok?fmt(b.ops):'—'}</td>
+      <td class="num" ${ac}>${ok?fmt(b.slg):'—'}</td>
+      <td class="num">${p.batting.h||0}</td>
+      <td class="num" ${ac}>${b.singles}</td>
+      <td class="num">${p.batting.doubles||0}</td>
+      <td class="num">${p.batting.triples||0}</td>
+      <td class="num">${p.batting.hr||0}</td>
+      <td class="num">${p.batting.rbi||0}</td>
+      <td class="num">${p.batting.r||0}</td>
+      <td class="num">${p.batting.bb||0}</td>
+      <td class="num">${p.batting.k||0}</td>
+      <td class="num">${p.batting.kl||0}</td>
+      <td class="num">${p.batting.hbp||0}</td>
+      <td class="num">${p.batting.sac||0}</td>
+      <td class="num">${p.batting.sf||0}</td>
+      <td class="num">${p.batting.roe||0}</td>
+      <td class="num">${p.batting.fc||0}</td>
+      <td class="num">${p.batting.sb||0}</td>
+      <td class="num" ${ac}>${(b.sb+b.cs)>0?fmtPct(b.sbpct):'—'}</td>
+      <td class="num">${p.batting.cs||0}</td>
+      <td class="num">${p.batting.pik||0}</td>
+    </tr>`;
+  }).join('')}</tbody>`;
 }
 
 function renderPitchingTable() {
@@ -2205,8 +2326,15 @@ const COL = {
   rbi:     ['rbi','runsbattedin'],
   bb:      ['bb','walks','baseonballs'],
   k:       ['k','so','strikeouts'],
+  kl:      ['kl','k-l','klooking','strikeoutslooking'],
   hbp:     ['hbp','hitbypitch'],
-  sac:     ['sac','sf','sacrifices'],
+  sac:     ['sac','sacrificebunt','sacbunt','sacrifices'],
+  sf:      ['sf','sacrificefly','sacrfifly'],
+  roe:     ['roe','reachedonerror'],
+  fc:      ['fc','fielderschoice'],
+  sb:      ['sb','stolenbases','stolenbse'],
+  cs:      ['cs','caughtstealing'],
+  pik:     ['pik','pik','pickedoff'],
   // pitching
   appearances: ['app','appearances','g','gp'],
   ip:      ['ip','inningspitched'],
@@ -2342,7 +2470,10 @@ function gcDoImport() {
         ab: num(col(r,'ab')), h: num(col(r,'h')),
         doubles: num(col(r,'doubles')), triples: num(col(r,'triples')), hr: num(col(r,'hr')),
         r: num(col(r,'r')), rbi: num(col(r,'rbi')), bb: num(col(r,'bb')),
-        k: num(col(r,'k')), hbp: num(col(r,'hbp')), sac: num(col(r,'sac'))
+        k: num(col(r,'k')), kl: num(col(r,'kl')), hbp: num(col(r,'hbp')),
+        sac: num(col(r,'sac')), sf: num(col(r,'sf')),
+        roe: num(col(r,'roe')), fc: num(col(r,'fc')),
+        sb: num(col(r,'sb')), cs: num(col(r,'cs')), pik: num(col(r,'pik'))
       };
     } else {
       if (!p.positions.includes('P')) p.positions.unshift('P');
