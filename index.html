@@ -208,6 +208,43 @@ main{padding:16px;max-width:860px;margin:0 auto}
 /* HR RULES */
 .rules-box{background:#000;border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:.78rem;color:var(--muted);line-height:1.7}
 .rules-box b{color:var(--text)}
+/* BATTING SORT MODE BUTTONS */
+.bsm-btn{padding:5px 11px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.65rem;font-weight:800;letter-spacing:.4px;text-transform:uppercase;cursor:pointer;transition:all .15s;white-space:nowrap}
+.bsm-btn.bsm-on{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 10px rgba(228,0,43,.3)}
+/* LIVE GAME */
+.live-out{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);color:var(--border);display:flex;align-items:center;justify-content:center;font-size:.7rem;cursor:pointer;transition:all .15s;line-height:1;user-select:none}
+.live-out.on{border-color:var(--warn);color:var(--warn)}
+.live-batter-row{padding:10px 12px;border-radius:var(--radius);border:2px solid transparent;margin-bottom:4px;display:flex;align-items:center;gap:8px;background:var(--surface2);transition:all .15s}
+.live-batter-row.active{border-color:var(--accent);background:rgba(228,0,43,.08);box-shadow:0 0 0 1px rgba(228,0,43,.2)}
+.live-ab-btn{padding:3px 8px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.65rem;font-weight:800;cursor:pointer;transition:all .15s;letter-spacing:.3px;text-transform:uppercase}
+.live-ab-btn:hover{border-color:var(--text);color:var(--text)}
+.live-ab-btn.hit{border-color:var(--ok);color:var(--ok)}
+.live-ab-btn.out{border-color:var(--danger);color:var(--danger)}
+.live-ab-btn.walk{border-color:var(--gold);color:var(--gold)}
+/* PRINT */
+@media print{
+  body>*:not(#report-overlay){display:none!important}
+  #report-overlay{position:static!important;overflow:visible!important}
+  #report-actions{display:none!important}
+  #report-content{padding:0!important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+/* REPORT STYLES (screen + print) */
+.rpt-header{border-bottom:3px solid #e4002b;padding-bottom:14px;margin-bottom:20px;display:flex;align-items:flex-end;justify-content:space-between}
+.rpt-h1{font-size:1.8rem;font-weight:900;text-transform:uppercase;letter-spacing:-1px;color:#111;line-height:1}
+.rpt-sub{font-size:.75rem;color:#666;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:4px}
+.rpt-section{margin-bottom:22px}
+.rpt-section-title{font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#999;border-bottom:1px solid #eee;padding-bottom:4px;margin-bottom:10px}
+.rpt-tbl{width:100%;border-collapse:collapse;font-size:.78rem}
+.rpt-tbl th{text-align:left;font-size:.6rem;text-transform:uppercase;letter-spacing:1px;color:#999;font-weight:800;padding:5px 6px;border-bottom:2px solid #eee}
+.rpt-tbl td{padding:6px 6px;border-bottom:1px solid #f0f0f0;color:#111}
+.rpt-tbl tr:hover td{background:#fafafa}
+.rpt-tbl .num{text-align:right;font-variant-numeric:tabular-nums;font-family:monospace}
+.rpt-tbl .hi{font-weight:800;color:#111}
+.rpt-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.rpt-stat{text-align:center;padding:12px 8px;border:1px solid #eee;border-radius:4px;background:#fafafa}
+.rpt-stat-val{font-size:1.5rem;font-weight:900;color:#111;line-height:1}
+.rpt-stat-lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:1px;color:#999;font-weight:800;margin-top:3px}
 </style>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -338,6 +375,44 @@ main{padding:16px;max-width:860px;margin:0 auto}
       <button class="btn btn-outline" onclick="closeModal('player-modal')">Cancel</button>
       <button class="btn btn-danger btn-sm" id="pm-delete-btn" onclick="deletePlayer()" style="display:none">Delete</button>
       <button class="btn btn-primary" onclick="savePlayer()">Save Player</button>
+    </div>
+  </div>
+</div>
+
+<!-- CROP MODAL -->
+<div class="overlay" id="crop-modal">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-hdr">
+      <h2>Crop Photo</h2>
+      <button class="x-btn" onclick="closeCropModal()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;gap:14px;padding-bottom:10px">
+      <p style="font-size:.72rem;color:var(--muted);text-align:center;margin-bottom:0">Drag to reposition · Scroll or pinch to zoom</p>
+      <div id="crop-wrap" style="position:relative;width:280px;height:280px;overflow:hidden;background:#000;cursor:grab;touch-action:none;border-radius:4px;flex-shrink:0">
+        <img id="crop-img" style="position:absolute;user-select:none;pointer-events:none;-webkit-user-drag:none;image-rendering:auto" draggable="false">
+        <!-- SVG mask: dims outside circle, shows accent ring -->
+        <svg style="position:absolute;inset:0;width:280px;height:280px;pointer-events:none" viewBox="0 0 280 280">
+          <defs>
+            <mask id="crop-hole-mask">
+              <rect width="280" height="280" fill="white"/>
+              <circle cx="140" cy="140" r="132" fill="black"/>
+            </mask>
+          </defs>
+          <rect width="280" height="280" fill="rgba(0,0,0,0.6)" mask="url(#crop-hole-mask)"/>
+          <circle cx="140" cy="140" r="132" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+          <circle cx="140" cy="140" r="132" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="6 4"/>
+        </svg>
+      </div>
+      <div style="width:100%;display:flex;align-items:center;gap:10px">
+        <span style="font-size:.7rem;color:var(--muted)">−</span>
+        <input type="range" id="crop-zoom-slider" min="0" max="100" value="0" step="1" style="flex:1;accent-color:var(--accent)">
+        <span style="font-size:.7rem;color:var(--muted)">+</span>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="cropReset()" style="align-self:flex-end">↺ Reset</button>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-outline" onclick="closeCropModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="commitCrop()">✓ Use This Crop</button>
     </div>
   </div>
 </div>
@@ -616,8 +691,19 @@ main{padding:16px;max-width:860px;margin:0 auto}
             <button class="mode-btn on" id="mode-all" onclick="gdSetMode('all')">All Players Bat</button>
             <button class="mode-btn" id="mode-9" onclick="gdSetMode('9')">9-Man Lineup</button>
           </div>
+          <!-- Batting order philosophy -->
+          <div style="margin-bottom:12px">
+            <div style="font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:6px">Order Strategy</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <button id="bsm-moneyball" class="bsm-btn bsm-on" onclick="setBatSortMode('moneyball')">⚡ Moneyball</button>
+              <button id="bsm-stack"     class="bsm-btn" onclick="setBatSortMode('stack')">📈 Stack Top</button>
+              <button id="bsm-protect"   class="bsm-btn" onclick="setBatSortMode('protect')">🛡 Protect</button>
+              <button id="bsm-speed"     class="bsm-btn" onclick="setBatSortMode('speed')">💨 Speed 1st</button>
+            </div>
+            <div id="bsm-desc" style="font-size:.68rem;color:var(--muted);margin-top:5px;font-style:italic">OBP at top, OPS throughout — maximize run production</div>
+          </div>
           <div id="gd-lineup-list"></div>
-          <div style="margin-top:8px;font-size:.72rem;color:var(--muted)">⬆⬇ Drag to reorder • Stats-based recommendations (Moneyball engine)</div>
+          <div style="margin-top:8px;font-size:.72rem;color:var(--muted)">Drag or ▲▼ to manually override order</div>
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-outline" onclick="gdStep1()">← Back</button>
@@ -651,6 +737,55 @@ main{padding:16px;max-width:860px;margin:0 auto}
         <div class="card" id="gd-card-content"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
           <button class="btn btn-outline" onclick="gdGoStep(3)">← Back</button>
+          <button class="btn btn-warn" onclick="gdStartLive()" style="margin-left:auto">⚡ Go Live</button>
+          <button class="btn btn-outline" onclick="openReport('gamecard')">🖨 Print Card</button>
+          <button class="btn btn-ok" onclick="gdLogStats()">📊 Log Stats</button>
+        </div>
+      </div>
+
+      <!-- LIVE GAME PANEL -->
+      <div id="gd-panel5" style="display:none">
+        <!-- Scoreboard -->
+        <div class="card" style="padding:12px 14px;margin-bottom:8px">
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;text-align:center">
+            <div>
+              <div style="font-size:.58rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px" id="live-us-lbl">US</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+                <button onclick="liveScore('us',-1)" style="background:none;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:3px;cursor:pointer;font-size:1rem;line-height:1">−</button>
+                <span id="live-us-score" style="font-size:2.8rem;font-weight:900;letter-spacing:-2px;line-height:1">0</span>
+                <button onclick="liveScore('us',1)" style="background:var(--accent);border:none;color:#fff;width:28px;height:28px;border-radius:3px;cursor:pointer;font-size:1rem;line-height:1">+</button>
+              </div>
+            </div>
+            <div style="text-align:center">
+              <div id="live-inning-lbl" style="font-size:.7rem;font-weight:900;color:var(--gold);text-transform:uppercase;letter-spacing:1px">Top 1st</div>
+              <div style="display:flex;gap:5px;justify-content:center;margin-top:6px">
+                <div id="live-out0" class="live-out" onclick="liveOuts(0)">●</div>
+                <div id="live-out1" class="live-out" onclick="liveOuts(1)">●</div>
+                <div id="live-out2" class="live-out" onclick="liveOuts(2)">●</div>
+              </div>
+              <button onclick="liveNextInning()" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--muted);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px">Next Inning ▶</button>
+            </div>
+            <div>
+              <div style="font-size:.58rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px" id="live-them-lbl">THEM</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+                <button onclick="liveScore('them',-1)" style="background:none;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:3px;cursor:pointer;font-size:1rem;line-height:1">−</button>
+                <span id="live-them-score" style="font-size:2.8rem;font-weight:900;letter-spacing:-2px;line-height:1">0</span>
+                <button onclick="liveScore('them',1)" style="background:none;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:3px;cursor:pointer;font-size:1rem;line-height:1">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Pitcher tracker -->
+        <div class="card" style="padding:12px 14px;margin-bottom:8px" id="live-pitcher-card"></div>
+        <!-- Batting order -->
+        <div class="card" style="padding:12px 14px;margin-bottom:8px">
+          <div class="card-title">Batting Order</div>
+          <div id="live-lineup-list"></div>
+        </div>
+        <!-- Bench -->
+        <div class="card" style="padding:10px 14px;margin-bottom:8px" id="live-bench-card"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="gdGoStep(4)">← Card</button>
           <button class="btn btn-ok" style="margin-left:auto" onclick="gdLogStats()">📊 Log Stats</button>
         </div>
       </div>
@@ -658,12 +793,15 @@ main{padding:16px;max-width:860px;margin:0 auto}
 
     <!-- ANALYTICS -->
     <div class="view" id="view-analytics">
-      <div class="itabs">
-        <button class="itab active" id="itab-season" onclick="showItab('an-season',this)">✏ Season Stats</button>
-        <button class="itab" onclick="showItab('an-bat',this)">Batting</button>
-        <button class="itab" onclick="showItab('an-pitch',this)">Pitching</button>
-        <button class="itab" onclick="showItab('an-field',this)">Fielding</button>
-        <button class="itab" onclick="showItab('an-team',this)">Team</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap">
+        <div class="itabs" style="margin-bottom:0;flex:1">
+          <button class="itab active" id="itab-season" onclick="showItab('an-season',this)">✏ Season Stats</button>
+          <button class="itab" onclick="showItab('an-bat',this)">Batting</button>
+          <button class="itab" onclick="showItab('an-pitch',this)">Pitching</button>
+          <button class="itab" onclick="showItab('an-field',this)">Fielding</button>
+          <button class="itab" onclick="showItab('an-team',this)">Team</button>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="openReport('season')" style="flex-shrink:0;white-space:nowrap">🖨 Season Report</button>
       </div>
 
       <!-- EDITABLE SEASON STATS -->
@@ -837,6 +975,16 @@ main{padding:16px;max-width:860px;margin:0 auto}
     </div>
 
   </main>
+</div>
+
+<!-- PRINT REPORT OVERLAY -->
+<div id="report-overlay" style="display:none;position:fixed;inset:0;background:#fff;z-index:9990;overflow:auto;color:#111;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','Segoe UI',sans-serif">
+  <div id="report-actions" style="position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:10px 16px;display:flex;align-items:center;gap:8px;z-index:2">
+    <span id="report-title-bar" style="font-weight:900;font-size:.85rem;text-transform:uppercase;letter-spacing:.5px;flex:1"></span>
+    <button onclick="window.print()" style="background:#111;color:#fff;border:none;padding:8px 18px;border-radius:3px;font-size:.78rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer">🖨 Print</button>
+    <button onclick="closeReport()" style="background:none;border:1px solid #ccc;padding:8px 14px;border-radius:3px;font-size:.78rem;font-weight:800;cursor:pointer">✕ Close</button>
+  </div>
+  <div id="report-content" style="max-width:760px;margin:0 auto;padding:24px 20px"></div>
 </div>
 
 <script>
@@ -1524,23 +1672,168 @@ function pmPhotoChange(input) {
   const file = input.files && input.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const size = Math.min(img.width, img.height, 300);
-      canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      // Center-crop to square
-      const sx = (img.width - size) / 2, sy = (img.height - size) / 2;
-      ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
-      pmPhotoData = canvas.toDataURL('image/jpeg', 0.8);
-      pmSetPhotoPreview(pmPhotoData);
-    };
-    img.src = e.target.result;
-  };
+  reader.onload = e => openCropModal(e.target.result);
   reader.readAsDataURL(file);
   input.value = '';
+}
+
+// ---- Crop modal ----
+const CROP_SIZE = 280; // display canvas size (px)
+let _cropSrc = null, _cropScale = 1, _cropMinScale = 1, _cropMaxScale = 4;
+let _cropX = 0, _cropY = 0; // top-left of image in container coords
+let _cropDragging = false, _cropDX = 0, _cropDY = 0, _cropDOX = 0, _cropDOY = 0;
+let _cropPinchDist = null, _cropPinchScale = 1, _cropPinchOX = 0, _cropPinchOY = 0;
+let _cropListenersAttached = false;
+
+function openCropModal(src) {
+  _cropSrc = src;
+  document.getElementById('crop-modal').classList.add('open');
+  const img = document.getElementById('crop-img');
+  img.onload = () => {
+    _cropMinScale = Math.max(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
+    _cropMaxScale = _cropMinScale * 5;
+    _cropScale = _cropMinScale;
+    // Center the image
+    _cropX = (CROP_SIZE - img.naturalWidth * _cropScale) / 2;
+    _cropY = (CROP_SIZE - img.naturalHeight * _cropScale) / 2;
+    document.getElementById('crop-zoom-slider').value = 0;
+    _applyCropTransform();
+  };
+  img.src = src;
+  if (!_cropListenersAttached) { _attachCropListeners(); _cropListenersAttached = true; }
+}
+
+function closeCropModal() {
+  document.getElementById('crop-modal').classList.remove('open');
+}
+
+function _applyCropTransform() {
+  const img = document.getElementById('crop-img');
+  if (!img) return;
+  const scaledW = img.naturalWidth * _cropScale;
+  const scaledH = img.naturalHeight * _cropScale;
+  // Clamp so image always fills the container
+  _cropX = Math.min(0, Math.max(CROP_SIZE - scaledW, _cropX));
+  _cropY = Math.min(0, Math.max(CROP_SIZE - scaledH, _cropY));
+  img.style.width  = scaledW + 'px';
+  img.style.height = scaledH + 'px';
+  img.style.left   = _cropX + 'px';
+  img.style.top    = _cropY + 'px';
+}
+
+function _cropZoomAround(newScale, pxInContainer, pyInContainer) {
+  newScale = Math.min(_cropMaxScale, Math.max(_cropMinScale, newScale));
+  // Keep the point (pxInContainer, pyInContainer) fixed on screen
+  const imgPx = (pxInContainer - _cropX) / _cropScale;
+  const imgPy = (pyInContainer - _cropY) / _cropScale;
+  _cropScale = newScale;
+  _cropX = pxInContainer - imgPx * _cropScale;
+  _cropY = pyInContainer - imgPy * _cropScale;
+  // Sync slider: 0..100 maps to minScale..maxScale
+  const pct = (_cropScale - _cropMinScale) / (_cropMaxScale - _cropMinScale) * 100;
+  document.getElementById('crop-zoom-slider').value = pct;
+  _applyCropTransform();
+}
+
+function cropReset() {
+  const img = document.getElementById('crop-img');
+  if (!img || !img.naturalWidth) return;
+  _cropScale = _cropMinScale;
+  _cropX = (CROP_SIZE - img.naturalWidth * _cropScale) / 2;
+  _cropY = (CROP_SIZE - img.naturalHeight * _cropScale) / 2;
+  document.getElementById('crop-zoom-slider').value = 0;
+  _applyCropTransform();
+}
+
+function commitCrop() {
+  const img = document.getElementById('crop-img');
+  if (!img || !img.naturalWidth) return;
+  // The 280×280 container corresponds to image region starting at (-_cropX/_cropScale, -_cropY/_cropScale)
+  const srcX    = -_cropX / _cropScale;
+  const srcY    = -_cropY / _cropScale;
+  const srcSize = CROP_SIZE / _cropScale;
+  const canvas  = document.createElement('canvas');
+  canvas.width  = 300;
+  canvas.height = 300;
+  canvas.getContext('2d').drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, 300, 300);
+  pmPhotoData = canvas.toDataURL('image/jpeg', 0.85);
+  pmSetPhotoPreview(pmPhotoData);
+  closeCropModal();
+}
+
+function _attachCropListeners() {
+  const wrap = document.getElementById('crop-wrap');
+  if (!wrap) return;
+
+  // Mouse drag
+  wrap.addEventListener('mousedown', e => {
+    _cropDragging = true;
+    _cropDX = e.clientX; _cropDY = e.clientY;
+    _cropDOX = _cropX;   _cropDOY = _cropY;
+    wrap.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!_cropDragging) return;
+    _cropX = _cropDOX + (e.clientX - _cropDX);
+    _cropY = _cropDOY + (e.clientY - _cropDY);
+    _applyCropTransform();
+  });
+  window.addEventListener('mouseup', () => {
+    _cropDragging = false;
+    const w = document.getElementById('crop-wrap');
+    if (w) w.style.cursor = 'grab';
+  });
+
+  // Scroll-to-zoom
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect = wrap.getBoundingClientRect();
+    _cropZoomAround(
+      _cropScale * (e.deltaY < 0 ? 1.08 : 0.93),
+      e.clientX - rect.left, e.clientY - rect.top
+    );
+  }, { passive: false });
+
+  // Touch drag + pinch
+  wrap.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      _cropPinchDist  = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      _cropPinchScale = _cropScale;
+      _cropPinchOX    = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      _cropPinchOY    = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    } else if (e.touches.length === 1) {
+      _cropDX = e.touches[0].clientX; _cropDY = e.touches[0].clientY;
+      _cropDOX = _cropX; _cropDOY = _cropY;
+      _cropPinchDist = null;
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  wrap.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && _cropPinchDist) {
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      const rect = wrap.getBoundingClientRect();
+      _cropZoomAround(
+        _cropPinchScale * (dist / _cropPinchDist),
+        _cropPinchOX - rect.left, _cropPinchOY - rect.top
+      );
+    } else if (e.touches.length === 1 && !_cropPinchDist) {
+      _cropX = _cropDOX + (e.touches[0].clientX - _cropDX);
+      _cropY = _cropDOY + (e.touches[0].clientY - _cropDY);
+      _applyCropTransform();
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  wrap.addEventListener('touchend', () => { _cropPinchDist = null; });
+
+  // Zoom slider
+  document.getElementById('crop-zoom-slider').addEventListener('input', function() {
+    const pct = parseFloat(this.value) / 100;
+    const newScale = _cropMinScale + pct * (_cropMaxScale - _cropMinScale);
+    _cropZoomAround(newScale, CROP_SIZE / 2, CROP_SIZE / 2);
+  });
 }
 
 function pmPhotoClear() {
@@ -2033,7 +2326,7 @@ function gdUpdateGame() {}
 
 function gdGoStep(n, skipSave) {
   gdCurrentStep = n;
-  [1,2,3,4].forEach(i => {
+  [1,2,3,4,5].forEach(i => {
     const panel = document.getElementById(`gd-panel${i}`);
     if (panel) panel.style.display = i===n?'block':'none';
     const step = document.getElementById(`gd-step${i}`);
@@ -3304,6 +3597,467 @@ John Smith,7,0,0,0,0,0,0,0,0`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href=url; a.download='lcybl-stats-template.txt'; a.click();
   URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// BATTING ORDER MODES
+// ============================================================
+let gdBatSortMode = 'moneyball';
+
+const BSM_DESC = {
+  moneyball: 'OBP at top, OPS throughout — maximize run production',
+  stack:     'Best 5 hitters get the most at-bats — pure offense',
+  protect:   'Strong hitters surround weaker ones — no easy outs',
+  speed:     'Fastest base-stealers lead off — pressure from the start'
+};
+
+function setBatSortMode(mode) {
+  gdBatSortMode = mode;
+  ['moneyball','stack','protect','speed'].forEach(m => {
+    const b = document.getElementById('bsm-'+m);
+    if (b) { b.classList.toggle('bsm-on', m === mode); }
+  });
+  const desc = document.getElementById('bsm-desc');
+  if (desc) desc.textContent = BSM_DESC[mode] || '';
+  const present = S.players.filter(p => gdPresent.has(p.id));
+  gdLineup = applyBatSortMode(present, mode);
+  renderLineup();
+  gdSaveState();
+}
+
+function applyBatSortMode(present, mode) {
+  const MIN_PA = 5;
+  const pool9  = gdMode === '9' ? 9 : Infinity;
+
+  const scored = present.map(p => {
+    const b     = calcBatting(p.batting);
+    const hasSt = b.pa >= MIN_PA;
+    const obp   = hasSt ? b.obp : posDefaultOBP((p.positions||[])[0]);
+    const slg   = hasSt ? b.slg : posDefaultSLG((p.positions||[])[0]);
+    const ops   = obp + slg;
+    const sbRate = hasSt && b.pa > 0 ? b.sb / b.pa : 0;
+    const sbpct  = hasSt && (b.sb+b.cs) > 0 ? b.sb/(b.sb+b.cs) : 0.5;
+    const spd    = sbRate * (sbpct>=0.70?1.0:sbpct>=0.60?0.6:0.3);
+    return { p, obp, slg, ops, spd };
+  });
+
+  let sorted;
+  switch (mode) {
+    case 'stack': {
+      sorted = [...scored].sort((a,b) => b.ops - a.ops);
+      break;
+    }
+    case 'protect': {
+      const byOps  = [...scored].sort((a,b) => b.ops - a.ops);
+      const half   = Math.ceil(byOps.length / 2);
+      const strong = byOps.slice(0, half);
+      const weak   = byOps.slice(half).reverse();
+      const merged = [];
+      for (let i = 0; i < Math.max(strong.length, weak.length); i++) {
+        if (strong[i]) merged.push(strong[i]);
+        if (weak[i])   merged.push(weak[i]);
+      }
+      sorted = merged;
+      break;
+    }
+    case 'speed': {
+      const bySpd  = [...scored].sort((a,b) => b.spd - a.spd);
+      const top3   = bySpd.slice(0, 3);
+      const rest   = bySpd.slice(3).sort((a,b) => b.ops - a.ops);
+      sorted = [...top3, ...rest];
+      break;
+    }
+    case 'moneyball':
+    default:
+      return buildBattingOrder(present, gdMode);
+  }
+
+  if (pool9 < sorted.length) sorted = sorted.slice(0, pool9);
+  return sorted.map(s => s.p);
+}
+
+// ============================================================
+// LIVE IN-GAME MODE
+// ============================================================
+let gdLiveState = {
+  usScore:0, themScore:0, inning:1, topBottom:'top', outs:0,
+  batterIdx:0, pitchCounts:{}, subs:{}
+};
+
+function gdStartLive() {
+  // Pull opponent name from selected game
+  const selGame = document.getElementById('gd-game-select').value;
+  const g = S.games.find(x => x.id === selGame);
+  document.getElementById('live-us-lbl').textContent   = S.name || 'US';
+  document.getElementById('live-them-lbl').textContent = g ? g.opponent : 'THEM';
+  gdLiveState = { usScore:0, themScore:0, inning:1, topBottom:'top', outs:0,
+                  batterIdx:0, pitchCounts:{}, subs:{} };
+  renderLiveMode();
+  gdGoStep(5);
+}
+
+function renderLiveMode() {
+  renderLiveInning();
+  renderLivePitcher();
+  renderLiveLineup();
+  renderLiveBench();
+}
+
+function renderLiveInning() {
+  const top   = gdLiveState.topBottom === 'top';
+  const ord   = ['1st','2nd','3rd','4th','5th','6th','7th'][gdLiveState.inning-1] || gdLiveState.inning+'th';
+  document.getElementById('live-inning-lbl').textContent = (top?'▲ Top ':'▼ Bot ') + ord;
+  document.getElementById('live-us-score').textContent   = gdLiveState.usScore;
+  document.getElementById('live-them-score').textContent = gdLiveState.themScore;
+  [0,1,2].forEach(i => {
+    const el = document.getElementById('live-out'+i);
+    el.classList.toggle('on', i < gdLiveState.outs);
+  });
+}
+
+function renderLivePitcher() {
+  const card = document.getElementById('live-pitcher-card');
+  const pitcherId = gdFieldAssign['P'];
+  const pitcher   = pitcherId ? S.players.find(p => p.id === pitcherId) : null;
+  const R         = rules();
+  if (!pitcher) { card.innerHTML = '<div style="font-size:.8rem;color:var(--muted)">No pitcher assigned</div>'; return; }
+  const thrown  = gdLiveState.pitchCounts[pitcher.id] || 0;
+  const limit   = R.pitchLimit;
+  const pct     = Math.min(100, thrown / limit * 100);
+  const color   = pct<60?'var(--ok)':pct<85?'var(--warn)':'var(--danger)';
+  const st      = pitchStatus(pitcher, today());
+  const remaining = Math.max(0, (st.remaining || limit) - thrown);
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px">
+      ${playerAvatar(pitcher, 38)}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.88rem;font-weight:800">${gdShortName(pitcher)} <span style="font-size:.65rem;font-weight:600;color:var(--muted)">pitcher</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .3s"></div>
+          </div>
+          <span style="font-size:.75rem;font-weight:800;color:${color};flex-shrink:0">${thrown}/${limit}</span>
+        </div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:2px">${remaining} pitches remaining this game</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        <button onclick="liveAddPitch(1)" style="background:var(--accent);border:none;color:#fff;width:36px;height:36px;border-radius:4px;cursor:pointer;font-size:1.1rem;font-weight:900;box-shadow:0 2px 8px rgba(228,0,43,.3)">+</button>
+        <button onclick="liveAddPitch(-1)" style="background:none;border:1px solid var(--border);color:var(--muted);width:36px;height:22px;border-radius:3px;cursor:pointer;font-size:.7rem;line-height:1">−</button>
+      </div>
+    </div>
+    ${pct>=85?`<div class="alert alert-danger" style="margin-top:8px;font-size:.75rem;padding:7px 10px">⚠ Approaching limit — ${remaining} pitches left</div>`:''}
+    ${pct>=100?`<div class="alert alert-danger" style="margin-top:6px;font-size:.75rem;padding:7px 10px;font-weight:900">🛑 Pitch limit reached — must remove pitcher</div>`:''}`;
+}
+
+function renderLiveLineup() {
+  const el = document.getElementById('live-lineup-list');
+  const lineup = gdLineup.map((p,i) => {
+    const isActive = i === gdLiveState.batterIdx;
+    const sub = gdLiveState.subs[p.id];
+    const display = sub ? S.players.find(x=>x.id===sub)||p : p;
+    return `<div class="live-batter-row ${isActive?'active':''}" id="lb-row-${i}">
+      <div style="font-size:.72rem;font-weight:900;color:${isActive?'var(--accent)':'var(--muted)'};width:16px;flex-shrink:0">${i+1}</div>
+      ${playerAvatar(display,30)}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.82rem;font-weight:700">${gdShortName(display)}${sub?'<span style="font-size:.6rem;color:var(--gold);margin-left:4px">SUB</span>':''}</div>
+        <div style="font-size:.62rem;color:var(--muted)">${(display.positions||[]).slice(0,2).join(' · ')||'—'}</div>
+      </div>
+      ${isActive?`<div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="live-ab-btn hit"  onclick="liveAB(${i},'H')">H</button>
+        <button class="live-ab-btn hit"  onclick="liveAB(${i},'2B')">2B</button>
+        <button class="live-ab-btn hit"  onclick="liveAB(${i},'HR')">HR</button>
+        <button class="live-ab-btn walk" onclick="liveAB(${i},'BB')">BB</button>
+        <button class="live-ab-btn out"  onclick="liveAB(${i},'K')">K</button>
+        <button class="live-ab-btn out"  onclick="liveAB(${i},'OUT')">Out</button>
+        <button onclick="liveNextBatter()" style="background:var(--accent);border:none;color:#fff;padding:3px 10px;border-radius:3px;cursor:pointer;font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px">Next ▶</button>
+      </div>`:'<button onclick="gdLiveState.batterIdx='+i+';renderLiveLineup()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:.62rem">▶ Up</button>'}
+    </div>`;
+  }).join('');
+  el.innerHTML = lineup || '<div class="empty"><p>No lineup set</p></div>';
+}
+
+function renderLiveBench() {
+  const card = document.getElementById('live-bench-card');
+  const inLineup = new Set(gdLineup.map(p => gdLiveState.subs[p.id] || p.id));
+  const bench = S.players.filter(p => gdPresent.has(p.id) && !inLineup.has(p.id));
+  if (!bench.length) { card.style.display='none'; return; }
+  card.style.display='block';
+  card.innerHTML = `<div class="card-title" style="margin-bottom:8px">Bench — tap to substitute</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      ${bench.map(p=>`<div class="chip" onclick="liveSubModal('${p.id}')" style="cursor:pointer">
+        ${playerAvatar(p,22)}
+        <span>${gdShortName(p)}</span>
+      </div>`).join('')}
+    </div>`;
+}
+
+function liveScore(team, delta) {
+  if (team==='us')   gdLiveState.usScore   = Math.max(0, gdLiveState.usScore   + delta);
+  else               gdLiveState.themScore = Math.max(0, gdLiveState.themScore + delta);
+  renderLiveInning();
+}
+
+function liveOuts(clicked) {
+  // Cycle: tap filled out to set outs to that number, tap current last to go to 0
+  const cur = gdLiveState.outs;
+  gdLiveState.outs = (clicked + 1 === cur) ? 0 : clicked + 1;
+  if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); }
+  renderLiveInning();
+}
+
+function liveNextHalf() {
+  if (gdLiveState.topBottom === 'top') {
+    gdLiveState.topBottom = 'bot';
+  } else {
+    gdLiveState.topBottom = 'top';
+    gdLiveState.inning    = Math.min(gdLiveState.inning + 1, 7);
+  }
+  gdLiveState.outs = 0;
+}
+
+function liveNextInning() {
+  liveNextHalf();
+  renderLiveInning();
+}
+
+function liveAddPitch(n) {
+  const pitcherId = gdFieldAssign['P'];
+  if (!pitcherId) return;
+  gdLiveState.pitchCounts[pitcherId] = Math.max(0, (gdLiveState.pitchCounts[pitcherId]||0) + n);
+  renderLivePitcher();
+}
+
+function liveAB(idx, result) {
+  // Record result label on the row for display, then advance
+  liveNextBatter();
+}
+
+function liveNextBatter() {
+  gdLiveState.batterIdx = (gdLiveState.batterIdx + 1) % (gdLineup.length || 1);
+  renderLiveLineup();
+}
+
+function liveSubModal(benchPlayerId) {
+  const benchPlayer = S.players.find(p => p.id === benchPlayerId);
+  if (!benchPlayer) return;
+  const lineupNames = gdLineup.map((p,i) => {
+    const cur = gdLiveState.subs[p.id] ? S.players.find(x=>x.id===gdLiveState.subs[p.id]) : p;
+    return `<option value="${p.id}">${i+1}. ${gdShortName(cur||p)}</option>`;
+  }).join('');
+  const sel = `<select id="sub-target-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:8px;border-radius:3px;font-size:.88rem;margin-bottom:12px">${lineupNames}</select>`;
+  document.getElementById('confirm-modal-msg').innerHTML =
+    `Sub <b>${gdShortName(benchPlayer)}</b> in for:<br><br>${sel}`;
+  document.getElementById('confirm-modal-ok').onclick = () => {
+    const targetId = document.getElementById('sub-target-sel').value;
+    gdLiveState.subs[targetId] = benchPlayerId;
+    closeModal('confirm-modal');
+    renderLiveMode();
+  };
+  openModal('confirm-modal');
+}
+
+// ============================================================
+// PRINT REPORTS
+// ============================================================
+function openReport(type) {
+  const overlay = document.getElementById('report-overlay');
+  const content = document.getElementById('report-content');
+  const titleBar = document.getElementById('report-title-bar');
+  overlay.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+
+  if (type === 'season') {
+    titleBar.textContent = `${S.name} — Season Summary`;
+    content.innerHTML = buildSeasonReport();
+  } else if (type === 'gamecard') {
+    titleBar.textContent = `${S.name} — Game Card`;
+    content.innerHTML = buildGameCardReport();
+  }
+}
+
+function closeReport() {
+  document.getElementById('report-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function buildSeasonReport() {
+  const games   = S.games || [];
+  const wins    = games.filter(g=>g.result==='W').length;
+  const losses  = games.filter(g=>g.result==='L').length;
+  const ties    = games.filter(g=>g.result==='T').length;
+  const played  = wins + losses + ties;
+  const players = [...(S.players||[])].sort((a,b)=>(a.jersey|0)-(b.jersey|0));
+
+  // Team batting totals
+  let totAB=0,totH=0,totBB=0,totK=0,totRBI=0,totSB=0;
+  players.forEach(p=>{
+    totAB+=p.batting.ab||0; totH+=p.batting.h||0;
+    totBB+=p.batting.bb||0; totK+=p.batting.k||0;
+    totRBI+=p.batting.rbi||0; totSB+=p.batting.sb||0;
+  });
+  const teamBA = totAB>0?(totH/totAB).toFixed(3).replace('0.','.'):'—';
+
+  // Top performers
+  const batRanked  = [...players].filter(p=>(calcBatting(p.batting).pa)>=5)
+    .sort((a,b)=>calcBatting(b.batting).ops - calcBatting(a.batting).ops).slice(0,3);
+  const pitchRanked = [...players].filter(p=>(p.pitching.ip||0)>=1)
+    .sort((a,b)=>calcPitching(a.pitching).era - calcPitching(b.pitching).era).slice(0,3);
+
+  const batRows = players.map(p=>{
+    const b = calcBatting(p.batting);
+    if (b.pa < 1) return '';
+    return `<tr>
+      <td><b>#${p.jersey||'?'}</b> ${p.name}</td>
+      <td class="num">${b.pa}</td>
+      <td class="num">${fmt(b.ba)}</td>
+      <td class="num">${fmt(b.obp)}</td>
+      <td class="num">${fmt(b.slg)}</td>
+      <td class="num hi">${fmt(b.ops)}</td>
+      <td class="num">${p.batting.rbi||0}</td>
+      <td class="num">${p.batting.sb||0}</td>
+    </tr>`;
+  }).join('');
+
+  const pitchRows = players.filter(p=>(p.pitching.ip||0)>=1).map(p=>{
+    const pt = calcPitching(p.pitching);
+    return `<tr>
+      <td><b>#${p.jersey||'?'}</b> ${p.name}</td>
+      <td class="num">${p.pitching.gs||0}</td>
+      <td class="num">${fmtIP(p.pitching.ip)}</td>
+      <td class="num hi">${fmt(pt.era,2)}</td>
+      <td class="num">${fmt(pt.whip,2)}</td>
+      <td class="num">${p.pitching.k||0}</td>
+      <td class="num">${p.pitching.bb||0}</td>
+      <td class="num">${p.pitching.pitches||0}</td>
+    </tr>`;
+  }).join('');
+
+  const topBat   = batRanked.map(p=>`<b>#${p.jersey} ${p.name}</b> — OPS ${fmt(calcBatting(p.batting).ops)}`).join('<br>');
+  const topPitch = pitchRanked.map(p=>`<b>#${p.jersey} ${p.name}</b> — ERA ${fmt(calcPitching(p.pitching).era,2)}`).join('<br>');
+  const logo     = S.logo ? `<img src="${S.logo}" style="width:56px;height:56px;object-fit:contain;border-radius:50%">` : '<div style="width:56px;height:56px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:1.8rem">⚾</div>';
+
+  return `
+    <div class="rpt-header">
+      <div style="display:flex;align-items:center;gap:14px">${logo}<div>
+        <div class="rpt-h1">${S.name||'Team'}</div>
+        <div class="rpt-sub">${S.division||''} · ${S.season||''} Season · Generated ${new Date().toLocaleDateString()}</div>
+      </div></div>
+      <div style="text-align:right">
+        <div style="font-size:2rem;font-weight:900;letter-spacing:-1px;color:#111">${wins}-${losses}${ties?'-'+ties:''}</div>
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:#999">W-L Record</div>
+      </div>
+    </div>
+
+    <div class="rpt-stat-row">
+      <div class="rpt-stat"><div class="rpt-stat-val">${played}</div><div class="rpt-stat-lbl">Games Played</div></div>
+      <div class="rpt-stat"><div class="rpt-stat-val">${teamBA}</div><div class="rpt-stat-lbl">Team BA</div></div>
+      <div class="rpt-stat"><div class="rpt-stat-val">${totRBI}</div><div class="rpt-stat-lbl">Team RBI</div></div>
+      <div class="rpt-stat"><div class="rpt-stat-val">${totSB}</div><div class="rpt-stat-lbl">Team SB</div></div>
+    </div>
+
+    ${batRanked.length?`<div class="rpt-section">
+      <div class="rpt-section-title">Top Performers</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8rem;line-height:1.8">
+        <div><div style="font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Batting (OPS)</div>${topBat||'—'}</div>
+        <div><div style="font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Pitching (ERA)</div>${topPitch||'—'}</div>
+      </div>
+    </div>`:''}
+
+    ${batRows?`<div class="rpt-section">
+      <div class="rpt-section-title">Batting Statistics</div>
+      <table class="rpt-tbl">
+        <tr><th>Player</th><th class="num">PA</th><th class="num">BA</th><th class="num">OBP</th><th class="num">SLG</th><th class="num">OPS</th><th class="num">RBI</th><th class="num">SB</th></tr>
+        ${batRows}
+      </table>
+    </div>`:''}
+
+    ${pitchRows?`<div class="rpt-section">
+      <div class="rpt-section-title">Pitching Statistics</div>
+      <table class="rpt-tbl">
+        <tr><th>Player</th><th class="num">GS</th><th class="num">IP</th><th class="num">ERA</th><th class="num">WHIP</th><th class="num">K</th><th class="num">BB</th><th class="num">Pit</th></tr>
+        ${pitchRows}
+      </table>
+    </div>`:''}
+
+    <div style="margin-top:24px;padding-top:12px;border-top:1px solid #eee;font-size:.65rem;color:#bbb;text-align:center;letter-spacing:.5px">MONEYBALL · LCYBL ${S.season||''} · Intelligence Behind Every Lineup</div>`;
+}
+
+function buildGameCardReport() {
+  const selGame = document.getElementById('gd-game-select')?.value;
+  const g = S.games.find(x => x.id === selGame);
+  const R = rules();
+  const gameHdr = g ? `${g.opponent} · ${g.location} · ${g.date}` : 'Practice';
+  const logo = S.logo ? `<img src="${S.logo}" style="width:44px;height:44px;object-fit:contain;border-radius:50%">` : '<div style="width:44px;height:44px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:1.4rem">⚾</div>';
+
+  const batRows = gdLineup.map((p,i) => {
+    const pos = Object.entries(gdFieldAssign).find(([,id])=>id===p.id)?.[0] || '—';
+    const b = calcBatting(p.batting);
+    return `<tr>
+      <td style="width:24px;font-weight:900;color:#e4002b">${i+1}</td>
+      <td><b>#${p.jersey||'?'}</b> ${p.name}</td>
+      <td style="font-weight:800;color:#333">${pos}</td>
+      <td class="num">${b.pa>=5?fmt(b.ba):'—'}</td>
+      <td class="num">${b.pa>=5?fmt(b.obp):'—'}</td>
+      <td class="num hi">${b.pa>=5?fmt(b.ops):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const pitchRows = gdPitchRecs.slice(0,5).map((r,i) => {
+    const pct = r.st.ok ? Math.min(100,(r.st.remaining||R.pitchLimit)/R.pitchLimit*100) : 0;
+    return `<tr>
+      <td>${i===0&&r.st.ok?'★':i+1}</td>
+      <td><b>#${r.p.jersey}</b> ${r.p.name}</td>
+      <td>${r.st.ok?`${r.st.remaining||R.pitchLimit} avail`:'On Rest'}</td>
+      <td>${r.hasStats?fmt(r.pit.era,2):'—'}</td>
+      <td>${r.hasStats?fmt(r.pit.whip,2):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const fieldRows = Object.entries(gdFieldAssign).map(([pos,pid])=>{
+    const p = S.players.find(x=>x.id===pid);
+    return p ? `<tr><td style="font-weight:900;width:40px">${pos}</td><td>#${p.jersey||'?'} ${p.name}</td></tr>` : '';
+  }).join('');
+
+  return `
+    <div class="rpt-header">
+      <div style="display:flex;align-items:center;gap:12px">${logo}<div>
+        <div class="rpt-h1">${S.name||'Team'}</div>
+        <div class="rpt-sub">${gameHdr}</div>
+      </div></div>
+      <div style="text-align:right;font-size:.7rem;color:#999">${new Date().toLocaleDateString()}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div>
+        <div class="rpt-section">
+          <div class="rpt-section-title">Batting Order</div>
+          <table class="rpt-tbl">
+            <tr><th></th><th>Player</th><th>Pos</th><th class="num">BA</th><th class="num">OBP</th><th class="num">OPS</th></tr>
+            ${batRows||'<tr><td colspan="6" style="color:#999;padding:10px">No lineup set</td></tr>'}
+          </table>
+        </div>
+      </div>
+      <div>
+        ${pitchRows?`<div class="rpt-section">
+          <div class="rpt-section-title">Pitching</div>
+          <table class="rpt-tbl">
+            <tr><th></th><th>Pitcher</th><th>Avail</th><th class="num">ERA</th><th class="num">WHIP</th></tr>
+            ${pitchRows}
+          </table>
+        </div>`:''}
+        ${fieldRows?`<div class="rpt-section">
+          <div class="rpt-section-title">Field Positions</div>
+          <table class="rpt-tbl">${fieldRows}</table>
+        </div>`:''}
+      </div>
+    </div>
+    <div style="margin-top:24px;padding-top:12px;border-top:1px solid #eee;font-size:.65rem;color:#bbb;text-align:center;letter-spacing:.5px">MONEYBALL · Intelligence Behind Every Lineup</div>`;
+}
+
+function fmtIP(ip) {
+  if (!ip) return '0.0';
+  const full = Math.floor(ip);
+  const frac = Math.round((ip - full) * 10) / 10;
+  return `${full}.${Math.round(frac*3)}`;
 }
 
 // ============================================================
