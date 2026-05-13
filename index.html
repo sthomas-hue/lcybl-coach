@@ -16,7 +16,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','Segoe UI',Ro
 /* NAV */
 nav{background:#000;display:flex;overflow-x:auto;border-bottom:1px solid var(--border);scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
-nav button{flex:1;min-width:72px;padding:12px 6px;background:none;border:none;color:var(--muted);font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap}
+nav button{flex:1;min-width:58px;padding:10px 4px;background:none;border:none;color:var(--muted);font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap}
 nav button.active{color:var(--text);border-bottom-color:var(--accent)}
 nav button:hover{color:var(--text)}
 /* MAIN */
@@ -487,12 +487,12 @@ main{padding:16px;max-width:860px;margin:0 auto}
     </div>
   </header>
   <nav>
-    <button class="active" onclick="showView('dashboard',this)">Dashboard</button>
+    <button class="active" onclick="showView('dashboard',this)">Home</button>
     <button onclick="showView('roster',this)">Roster</button>
     <button onclick="showView('schedule',this)">Schedule</button>
     <button onclick="showView('gameday',this)">Game Day</button>
-    <button onclick="showView('analytics',this)">Analytics</button>
-    <button onclick="showView('settings',this)">Rules</button>
+    <button onclick="showView('analytics',this)">Stats</button>
+    <button onclick="showView('settings',this)">Settings</button>
   </nav>
   <main>
 
@@ -698,47 +698,67 @@ main{padding:16px;max-width:860px;margin:0 auto}
       </div>
     </div>
 
-    <!-- SETTINGS / RULES -->
+    <!-- SETTINGS -->
     <div class="view" id="view-settings">
-      <div class="sec-hdr"><h2>Team Settings & Rules</h2></div>
+      <div class="sec-hdr"><h2>Settings</h2></div>
+
+      <!-- Team identity -->
       <div class="card">
-        <div class="card-title">Current Team</div>
+        <div class="card-title">Team Identity</div>
         <div id="set-team-info" style="margin-bottom:12px;font-size:.9rem"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" onclick="openAddTeamModal(true)">✏ Edit Team Info</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteTeam()">Delete This Team</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn btn-outline btn-sm" onclick="openAddTeamModal(true)">✏ Edit Name / Division / Logo / Colors</button>
+        </div>
+        <!-- Inline quick-color swatches -->
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Quick Colors:</div>
+          <label style="display:flex;align-items:center;gap:5px;font-size:.75rem;cursor:pointer">
+            Primary <input type="color" id="qs-color1" oninput="quickColor()" style="width:28px;height:24px;border:none;background:none;cursor:pointer;padding:0">
+          </label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:.75rem;cursor:pointer">
+            Secondary <input type="color" id="qs-color2" oninput="quickColor()" style="width:28px;height:24px;border:none;background:none;cursor:pointer;padding:0">
+          </label>
+          <button class="btn btn-outline btn-sm" onclick="quickColorSave()">Apply</button>
         </div>
       </div>
+
+      <!-- Backup & Sync -->
       <div class="card">
-        <div class="card-title">Active Rules for Your Division</div>
+        <div class="card-title">💾 Backup &amp; Sync</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn btn-primary" onclick="exportData()">↓ Save Backup</button>
+          <label for="import-file" class="btn btn-outline" style="cursor:pointer">↑ Load Backup</label>
+          <input type="file" id="import-file" accept=".json,application/json,text/*" style="display:none" onchange="importData(event)">
+        </div>
+        <div class="alert alert-warn" style="font-size:.78rem">
+          <span>📱</span>
+          <div><b>iPhone users:</b> Safari can clear storage when memory is low. Export a backup after every session and keep it in your Files app.</div>
+        </div>
+      </div>
+
+      <!-- GameChanger -->
+      <div class="card">
+        <div class="card-title">⚾ GameChanger Import</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn btn-primary btn-sm" onclick="openModal('gc-modal')">Import CSV Stats</button>
+          <button class="btn btn-outline btn-sm" onclick="downloadTemplate()">📋 Blank Template</button>
+        </div>
+        <div style="font-size:.75rem;color:var(--muted)">web.gc.com → your team → Stats → Export CSV. Import Batting and Pitching separately.</div>
+      </div>
+
+      <!-- Division Rules -->
+      <div class="card">
+        <div class="card-title">Division Rules</div>
         <div class="rules-box" id="rules-display"></div>
       </div>
-      <div class="card">
-        <div class="card-title">💾 Save &amp; Restore Data <span style="font-size:.7rem;color:var(--muted);font-weight:400">(important for iPhone)</span></div>
-        <div class="alert alert-warn" style="margin-bottom:12px;font-size:.8rem">
-          <span>📱</span>
-          <div><b>iPhone / Files App:</b> Safari can clear storage when memory is low. Keep a backup JSON file in your Files app and reload it if data disappears. Save after every session.</div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="exportData()">💾 Save Backup (all teams)</button>
-          <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">📂 Load Backup</button>
-          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Stats &amp; GameChanger</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="openModal('gc-modal')">⚾ Import from GameChanger</button>
-          <button class="btn btn-outline btn-sm" onclick="downloadTemplate()">📋 Download Blank Template</button>
-        </div>
-        <div class="alert alert-info" style="margin-top:12px;font-size:.78rem">
-          <span>💡</span>
-          <span>To export from GameChanger: open <b>web.gc.com</b> → your team → <b>Stats</b> → <b>Export CSV</b>. Import both Batting and Pitching CSVs here.</span>
-        </div>
-      </div>
+
+      <!-- Danger Zone -->
       <div class="card">
         <div class="card-title">Danger Zone</div>
-        <button class="btn btn-danger btn-sm" onclick="confirmResetTeam()">⚠ Reset This Team's Data</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-danger btn-sm" onclick="confirmResetTeam()">⚠ Reset This Team's Data</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTeam()">🗑 Delete This Team</button>
+        </div>
       </div>
     </div>
 
@@ -1736,11 +1756,75 @@ let gdPresent = new Set();
 let gdLineup = [];
 let gdMode = 'all';
 let gdFieldAssign = {};
+let gdPitchRecs = [];
+let gdCurrentStep = 1;
 let dragSrcPlayer = null;
 let dragSrcSlot = null;
 
+function gdSaveState() {
+  try {
+    sessionStorage.setItem('lcybl_gd', JSON.stringify({
+      teamId:      S.id,
+      gameId:      document.getElementById('gd-game-select').value,
+      present:     [...gdPresent],
+      lineupIds:   gdLineup.map(p=>p.id),
+      mode:        gdMode,
+      fieldAssign: gdFieldAssign,
+      pitchOrder:  gdPitchRecs.map(r=>r.p.id),
+      step:        gdCurrentStep
+    }));
+  } catch(e) {}
+}
+
+function gdRestoreState() {
+  try {
+    const raw = sessionStorage.getItem('lcybl_gd');
+    if (!raw) return false;
+    const st = JSON.parse(raw);
+    if (st.teamId !== S.id) return false; // different team — don't restore
+
+    // Restore attendance
+    gdPresent = new Set(st.present || []);
+    gdMode    = st.mode || 'all';
+    gdFieldAssign = st.fieldAssign || {};
+
+    // Restore game select
+    const sel = document.getElementById('gd-game-select');
+    if (st.gameId) sel.value = st.gameId;
+
+    // Restore lineup order (map IDs back to player objects)
+    if (st.lineupIds && st.lineupIds.length) {
+      gdLineup = st.lineupIds.map(id=>S.players.find(p=>p.id===id)).filter(Boolean);
+    }
+
+    renderAttGrid();
+
+    if (st.step >= 2 && gdLineup.length) {
+      renderLineup();
+      gdGoStep(st.step, true);
+      if (st.step === 3) {
+        const present = S.players.filter(p=>gdPresent.has(p.id));
+        const selGame = sel.value;
+        const g = S.games.find(x=>x.id===selGame);
+        const gd = g ? g.date : today();
+        gdPitchRecs = pitcherRecs(present.filter(p=>p.positions&&p.positions.includes('P')), gd);
+        // Restore pitch order if saved
+        if (st.pitchOrder && st.pitchOrder.length) {
+          const ordered = st.pitchOrder.map(id=>gdPitchRecs.find(r=>r.p.id===id)).filter(Boolean);
+          const rest    = gdPitchRecs.filter(r=>!st.pitchOrder.includes(r.p.id));
+          gdPitchRecs   = [...ordered, ...rest];
+        }
+        renderPitchRecs();
+        renderField(present);
+      }
+    } else {
+      gdGoStep(1, true);
+    }
+    return true;
+  } catch(e) { return false; }
+}
+
 function initGameDay() {
-  gdPresent = new Set();
   // Populate game select
   const sel = document.getElementById('gd-game-select');
   const upcoming = [...S.games].filter(g=>g.date>=today()).sort((a,b)=>a.date.localeCompare(b.date));
@@ -1749,11 +1833,18 @@ function initGameDay() {
       const d=new Date(g.date+'T00:00:00');
       return `<option value="${g.id}">${d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})} vs ${g.opponent}</option>`;
     }).join('');
-  // Pre-select next game
   if (upcoming.length) sel.value = upcoming[0].id;
 
+  // Try to restore mid-game state first
+  if (gdRestoreState()) return;
+
+  // Fresh start
+  gdPresent = new Set();
+  gdLineup  = [];
+  gdFieldAssign = {};
+  gdPitchRecs   = [];
   renderAttGrid();
-  gdGoStep(1);
+  gdGoStep(1, true);
 }
 
 function renderAttGrid() {
@@ -1773,12 +1864,14 @@ function renderAttGrid() {
 function gdToggle(id, el) {
   if (gdPresent.has(id)) { gdPresent.delete(id); el.classList.remove('on'); }
   else { gdPresent.add(id); el.classList.add('on'); }
+  gdSaveState();
 }
 function gdSelectAll() { S.players.forEach(p=>gdPresent.add(p.id)); renderAttGrid(); }
 function gdClearAll()  { gdPresent.clear(); renderAttGrid(); }
 function gdUpdateGame() {}
 
-function gdGoStep(n) {
+function gdGoStep(n, skipSave) {
+  gdCurrentStep = n;
   [1,2,3].forEach(i => {
     document.getElementById(`gd-panel${i}`).style.display = i===n?'block':'none';
     const step = document.getElementById(`gd-step${i}`);
@@ -1786,6 +1879,7 @@ function gdGoStep(n) {
     if (i<n) step.classList.add('done');
     else if (i===n) step.classList.add('active');
   });
+  if (!skipSave) gdSaveState();
 }
 
 function gdStep1() { gdGoStep(1); }
@@ -1793,7 +1887,6 @@ function gdStep1() { gdGoStep(1); }
 function gdStep2() {
   if (gdPresent.size < 1) { alert('Select at least 1 player'); return; }
   const present = S.players.filter(p=>gdPresent.has(p.id));
-  // Determine mode
   const R = rules();
   if (R.batAll) {
     gdMode = 'all';
@@ -1817,6 +1910,7 @@ function gdSetMode(m) {
   const present = S.players.filter(p=>gdPresent.has(p.id));
   gdLineup = buildBattingOrder(present, m);
   renderLineup();
+  gdSaveState();
 }
 
 function renderLineup() {
@@ -1849,6 +1943,7 @@ function batDrop(e,i) {
   gdLineup.splice(i,0,item);
   batDragIdx=null;
   renderLineup();
+  gdSaveState();
 }
 
 function gdStep3() {
@@ -1857,26 +1952,51 @@ function gdStep3() {
   const g = S.games.find(x=>x.id===selGame);
   const gd = g ? g.date : today();
 
-  // Pitching recs
-  const recs = pitcherRecs(present.filter(p=>p.positions&&p.positions.includes('P')), gd);
+  gdPitchRecs = pitcherRecs(present.filter(p=>p.positions&&p.positions.includes('P')), gd);
+  renderPitchRecs();
+
+  gdFieldAssign = autoAssignField(present);
+  renderField(present);
+  gdGoStep(3);
+}
+
+let pitchDragIdx = null;
+
+function renderPitchRecs() {
   const R = rules();
-  document.getElementById('gd-pitch-recs').innerHTML = recs.length ? recs.map((r,i) => {
-    const pct = r.st.ok ? Math.min(100,(r.st.remaining||R.pitchLimit)/R.pitchLimit*100) : 0;
+  const el = document.getElementById('gd-pitch-recs');
+  if (!gdPitchRecs.length) {
+    el.innerHTML = '<div class="empty"><p>No pitchers on the present roster</p></div>';
+    return;
+  }
+  el.innerHTML = gdPitchRecs.map((r,i) => {
+    const pct   = r.st.ok ? Math.min(100,(r.st.remaining||R.pitchLimit)/R.pitchLimit*100) : 0;
     const color = pct>60?'var(--ok)':pct>30?'var(--warn)':'var(--danger)';
-    return `<div class="pitch-row ${!r.st.ok?'':''}">
+    return `<div class="bat-slot" draggable="true" data-idx="${i}"
+        ondragstart="pitchDragStart(event,${i})" ondragover="pitchDragOver(event)" ondrop="pitchDrop(event,${i})" ondragleave="pitchDragLeave(event)"
+        style="opacity:${r.st.ok?1:.55}">
+      <span class="drag-handle">⠿</span>
       <div style="width:28px;height:28px;border-radius:50%;background:${i===0&&r.st.ok?'var(--accent)':'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0">${i===0&&r.st.ok?'★':i+1}</div>
-      <div class="pitch-info">
+      <div class="pitch-info" style="flex:1">
         <div class="pitch-name">#${r.p.jersey} ${r.p.name} ${r.st.ok?'':'<span class="badge b-red">On Rest</span>'}</div>
         <div class="pitch-detail">${r.st.ok?`${r.st.remaining||R.pitchLimit} pitches avail · ${r.hasStats?`ERA ${fmt(r.pit.era,2)} · WHIP ${fmt(r.pit.whip,2)} · K/BB ${fmt(r.pit.kbb,1)}`:'No stats yet'}`:r.st.reason}</div>
         ${r.st.ok?`<div class="pitch-bar-wrap" style="width:100px"><div class="pitch-bar-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
       </div>
     </div>`;
-  }).join('') : '<div class="empty"><p>No pitchers on the present roster</p></div>';
+  }).join('');
+}
 
-  // Field
-  gdFieldAssign = autoAssignField(present);
-  renderField(present);
-  gdGoStep(3);
+function pitchDragStart(e,i) { pitchDragIdx=i; e.currentTarget.style.opacity='.4'; }
+function pitchDragOver(e)    { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function pitchDragLeave(e)   { e.currentTarget.classList.remove('drag-over'); }
+function pitchDrop(e,i) {
+  e.preventDefault(); e.currentTarget.classList.remove('drag-over');
+  if (pitchDragIdx===null||pitchDragIdx===i) { pitchDragIdx=null; return; }
+  const item = gdPitchRecs.splice(pitchDragIdx,1)[0];
+  gdPitchRecs.splice(i,0,item);
+  pitchDragIdx=null;
+  renderPitchRecs();
+  gdSaveState();
 }
 
 function renderField(present) {
@@ -1924,6 +2044,7 @@ function fieldDrop(e,pos) {
   dragPid=null;
   const present=S.players.filter(p=>gdPresent.has(p.id));
   renderField(present);
+  gdSaveState();
 }
 
 let fieldClickPos = null;
@@ -2334,12 +2455,36 @@ function renderTeamStats() {
 }
 
 // ============================================================
-// SETTINGS / RULES
+// SETTINGS
 // ============================================================
 function renderSettings() {
   document.getElementById('set-team-info').innerHTML =
     `<b>${S.name}</b> &nbsp;·&nbsp; ${S.division} &nbsp;·&nbsp; ${S.season} season`;
+  // Populate quick-color pickers with current team colors
+  document.getElementById('qs-color1').value = S.colors?.primary   || '#e4002b';
+  document.getElementById('qs-color2').value = S.colors?.secondary || '#ffffff';
   renderRulesBox();
+}
+
+function quickColor() {
+  // Live preview while dragging the color picker
+  const p = document.getElementById('qs-color1').value;
+  const s = document.getElementById('qs-color2').value;
+  document.documentElement.style.setProperty('--accent',  p);
+  document.documentElement.style.setProperty('--accent2', s);
+  document.documentElement.style.setProperty('--danger',  p);
+  const hdr = document.querySelector('.hdr');
+  if (hdr) hdr.style.borderBottomColor = p;
+}
+
+function quickColorSave() {
+  if (!S) return;
+  S.colors = {
+    primary:   document.getElementById('qs-color1').value,
+    secondary: document.getElementById('qs-color2').value
+  };
+  applyTeamColors();
+  save();
 }
 
 function renderRulesBox() {
