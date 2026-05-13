@@ -902,19 +902,31 @@ function fmt(n, dec=3) {
 }
 function fmtPct(n) { return (n*100).toFixed(1)+'%'; }
 
-// BATTING ORDER ENGINE (Moneyball)
-// OBP wins games more than BA. OPS drives run production.
-// Classic Moneyball order: high OBP leadoff, best OPS 3rd/4th
+// BATTING ORDER ENGINE (Moneyball + Speed)
+// OBP leads, OPS drives production, SB rate rewards top-of-order speed.
+// Slot 1: OBP + speed (SB rate × efficiency) − K%
+// Slot 2: OBP + speed (secondary table-setter)
+// Slot 3: best OPS
+// Slot 4: best SLG (cleanup)
+// Slots 5+: OPS descending
 function buildBattingOrder(players, mode) {
   const MIN_PA = 5;
   const scored = players.map(p => {
     const b = calcBatting(p.batting);
     const hasSt = b.pa >= MIN_PA;
-    const obp = hasSt ? b.obp : posDefaultOBP(p.positions[0]);
-    const slg = hasSt ? b.slg : posDefaultSLG(p.positions[0]);
-    const kpct= hasSt ? b.kpct : 0.22;
-    const ops = obp + slg;
-    return { p, obp, slg, ops, kpct, hasSt };
+    const obp  = hasSt ? b.obp  : posDefaultOBP(p.positions[0]);
+    const slg  = hasSt ? b.slg  : posDefaultSLG(p.positions[0]);
+    const kpct = hasSt ? b.kpct : 0.22;
+    const ops  = obp + slg;
+
+    // Speed score: SB frequency × SB efficiency (only meaningful with stats)
+    // SB% >= 70% is considered successful; below 60% hurts more than it helps.
+    const sbpct = hasSt && (b.sb + b.cs) > 0 ? b.sb / (b.sb + b.cs) : null;
+    const sbRate = hasSt && b.pa > 0 ? b.sb / b.pa : 0;
+    const sbEff  = sbpct !== null ? (sbpct >= 0.70 ? 1.0 : sbpct >= 0.60 ? 0.6 : 0.2) : 0.5;
+    const spd    = sbRate * sbEff;   // e.g. 0.15 SB/PA at 80% = 0.12
+
+    return { p, obp, slg, ops, kpct, spd, hasSt };
   });
 
   let pool = [...scored].sort((a,b) => b.ops - a.ops);
@@ -922,15 +934,15 @@ function buildBattingOrder(players, mode) {
   if (pool.length === 0) return [];
   if (pool.length <= 3) return pool.map(s => s.p);
 
-  // Slot assignments
   const lineup = new Array(pool.length).fill(null);
-  const used = new Set();
+  const used   = new Set();
+  const avail  = () => pool.filter(s => !used.has(s.p.id));
+  const pick   = (arr) => { used.add(arr[0].p.id); return arr[0]; };
 
-  const avail = () => pool.filter(s => !used.has(s.p.id));
-  const pick = (arr) => { used.add(arr[0].p.id); return arr[0]; };
-
-  // Slot 1 leadoff: best OBP / low K%
-  const s1 = pick([...avail()].sort((a,b) => (b.obp - b.kpct*0.3) - (a.obp - a.kpct*0.3)));
+  // Slot 1 leadoff: OBP + speed bonus − K% penalty
+  const s1 = pick([...avail()].sort((a,b) =>
+    (b.obp + b.spd*0.20 - b.kpct*0.30) - (a.obp + a.spd*0.20 - a.kpct*0.30)
+  ));
   lineup[0] = s1;
 
   // Slot 3: best OPS overall
@@ -941,16 +953,16 @@ function buildBattingOrder(players, mode) {
   const s4 = pick([...avail()].sort((a,b) => b.slg - a.slg));
   lineup[3] = s4;
 
-  // Slot 2: best remaining OBP
-  const s2 = pick([...avail()].sort((a,b) => b.obp - a.obp));
+  // Slot 2: OBP + lighter speed bonus (table-setter)
+  const s2 = pick([...avail()].sort((a,b) =>
+    (b.obp + b.spd*0.10) - (a.obp + a.spd*0.10)
+  ));
   lineup[1] = s2;
 
-  // Slots 5+: by OPS descending
+  // Slots 5+: OPS descending
   const rest = [...avail()].sort((a,b) => b.ops - a.ops);
   let ri = 0;
-  for (let i = 4; i < lineup.length; i++) {
-    lineup[i] = rest[ri++];
-  }
+  for (let i = 4; i < lineup.length; i++) lineup[i] = rest[ri++];
 
   return lineup.filter(Boolean).map(s => s.p);
 }
