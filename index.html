@@ -198,8 +198,29 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .rules-box{background:#000;border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:.78rem;color:var(--muted);line-height:1.7}
 .rules-box b{color:var(--text)}
 </style>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="overlay open" style="z-index:9999;background:#000">
+  <div class="modal" style="max-width:360px;text-align:center">
+    <div class="modal-body" style="padding:40px 30px">
+      <div style="font-size:3rem;margin-bottom:16px">⚾</div>
+      <h1 style="font-size:1.4rem;font-weight:900;letter-spacing:-.5px;text-transform:uppercase;margin-bottom:6px">LCYBL Coach</h1>
+      <p style="color:var(--muted);font-size:.82rem;margin-bottom:32px">Sign in to sync your teams across devices</p>
+      <button onclick="signInWithGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#111;border:none;padding:13px 20px;border-radius:4px;font-size:.9rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+        Sign in with Google
+      </button>
+      <p id="auth-error" style="color:var(--danger);font-size:.75rem;margin-top:14px;display:none"></p>
+      <p style="color:var(--muted);font-size:.7rem;margin-top:24px;line-height:1.6">Your data is saved to the cloud and stays private to your account.</p>
+    </div>
+  </div>
+</div>
 
 <!-- SETUP SCREEN -->
 <div id="setup-screen" class="overlay open">
@@ -450,6 +471,9 @@ main{padding:16px;max-width:860px;margin:0 auto}
         style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:5px 10px;border-radius:4px;font-size:.72rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;white-space:nowrap">
         + Team
       </button>
+      <div id="user-avatar" onclick="signOutUser()" title="Sign out"
+        style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);cursor:pointer;overflow:hidden;display:none;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0">
+      </div>
     </div>
   </header>
   <nav>
@@ -730,10 +754,6 @@ function blankTeam(name, division, season) {
     players: [], games: [], baseline: {},
     get team() { return { name: this.name, division: this.division, season: this.season }; }
   };
-}
-
-function save() {
-  localStorage.setItem('lcybl_app', JSON.stringify(APP, (k,v) => k === 'team' ? undefined : v));
 }
 
 function load() {
@@ -2655,25 +2675,193 @@ John Smith,7,0,0,0,0,0,0,0,0`;
   URL.revokeObjectURL(url);
 }
 
-// BOOT
 // ============================================================
-load();
-// Point S at the active team (load() populates APP but doesn't set S)
-if (APP.teams && APP.teams.length) {
-  S = APP.teams.find(t => t.id === APP.currentTeamId) || APP.teams[0];
-  APP.currentTeamId = S.id;
+// FIREBASE CONFIG — paste your project config here
+// ============================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBPMyKPM66WuwRVx1mgDq0ugNPZxdjdwog",
+  authDomain:        "lcybl-coach.firebaseapp.com",
+  projectId:         "lcybl-coach",
+  storageBucket:     "lcybl-coach.firebasestorage.app",
+  messagingSenderId: "361698427087",
+  appId:             "1:361698427087:web:5f0c561564d9c0ca8677ba"
+};
+
+// ============================================================
+// FIREBASE INIT
+// ============================================================
+let db   = null;
+let auth = null;
+let currentUser = null;
+let cloudSaveTimer = null;
+
+function initFirebase() {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    auth = firebase.auth();
+    db   = firebase.firestore();
+    db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+  } catch(e) {
+    console.warn('Firebase init failed — running offline only', e);
+  }
 }
 
-if (S && S.name) {
-  document.getElementById('setup-screen').classList.remove('open');
-  document.getElementById('app').style.display = 'block';
-  recomputeSeasonTotals();
-  applyTeamColors();
-  renderTeamSwitcher();
-  updateHeader();
-  renderDashboard();
+// ============================================================
+// AUTH
+// ============================================================
+function signInWithGoogle() {
+  if (!auth) return;
+  const errEl = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  });
+}
+
+function signOutUser() {
+  if (!auth) return;
+  if (!confirm('Sign out? Your data is saved to the cloud.')) return;
+  auth.signOut();
+}
+
+function updateUserDisplay(user) {
+  const el = document.getElementById('user-avatar');
+  if (!el) return;
+  if (user) {
+    el.style.display = 'flex';
+    if (user.photoURL) {
+      el.style.backgroundImage = `url(${user.photoURL})`;
+      el.style.backgroundSize  = 'cover';
+      el.style.backgroundPosition = 'center';
+      el.textContent = '';
+    } else {
+      el.style.backgroundImage = '';
+      el.textContent = (user.displayName || user.email || '?')[0].toUpperCase();
+    }
+    el.title = `Signed in as ${user.displayName || user.email}\nClick to sign out`;
+  } else {
+    el.style.display = 'none';
+    el.style.backgroundImage = '';
+    el.textContent = '';
+  }
+}
+
+// ============================================================
+// CLOUD SAVE / LOAD
+// ============================================================
+function save() {
+  // Always save locally
+  localStorage.setItem('lcybl_app', JSON.stringify(APP, (k,v) => k === 'team' ? undefined : v));
+  // Debounce cloud save
+  if (currentUser && db) {
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(cloudSave, 1500);
+  }
+}
+
+function cloudSave() {
+  if (!currentUser || !db) return;
+  // Strip logos — too large for Firestore (1MB doc limit); they stay in localStorage only
+  const payload = JSON.parse(JSON.stringify(APP, (k,v) => k === 'team' ? undefined : v));
+  payload.teams.forEach(t => { t.logo = ''; });
+  db.collection('users').doc(currentUser.uid)
+    .set({ data: payload, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+    .catch(err => console.warn('Cloud save failed:', err));
+}
+
+function cloudLoad() {
+  if (!currentUser || !db) return Promise.resolve(null);
+  return db.collection('users').doc(currentUser.uid).get().then(doc => {
+    if (!doc.exists) return null;
+    return doc.data().data || null;
+  }).catch(err => { console.warn('Cloud load failed:', err); return null; });
+}
+
+// ============================================================
+// BOOT — driven by auth state
+// ============================================================
+function initApp() {
+  load();
+  if (APP.teams && APP.teams.length) {
+    S = APP.teams.find(t => t.id === APP.currentTeamId) || APP.teams[0];
+    APP.currentTeamId = S.id;
+  }
+
+  // Restore logos from localStorage into loaded teams (logos excluded from cloud)
+  APP.teams.forEach(t => {
+    const localRaw = localStorage.getItem('lcybl_app');
+    if (localRaw) {
+      try {
+        const local = JSON.parse(localRaw);
+        const localTeam = (local.teams || []).find(lt => lt.id === t.id);
+        if (localTeam && localTeam.logo) t.logo = localTeam.logo;
+      } catch(e) {}
+    }
+  });
+
+  if (S && S.name) {
+    document.getElementById('setup-screen').classList.remove('open');
+    document.getElementById('app').style.display = 'block';
+    recomputeSeasonTotals();
+    applyTeamColors();
+    renderTeamSwitcher();
+    updateHeader();
+    renderDashboard();
+  } else {
+    document.getElementById('app').style.display = 'none';
+    // setup-screen already has 'open' class from HTML — nothing to do
+  }
+}
+
+initFirebase();
+
+if (auth) {
+  auth.onAuthStateChanged(async user => {
+    currentUser = user;
+    updateUserDisplay(user);
+
+    if (user) {
+      // Hide auth screen
+      document.getElementById('auth-screen').classList.remove('open');
+
+      // Try to load from cloud first, fall back to localStorage
+      const cloudData = await cloudLoad();
+      if (cloudData && cloudData.teams && cloudData.teams.length) {
+        // Merge: cloud wins for data, localStorage wins for logos
+        const localRaw = localStorage.getItem('lcybl_app');
+        let localLogos = {};
+        if (localRaw) {
+          try {
+            const local = JSON.parse(localRaw);
+            (local.teams || []).forEach(t => { if (t.logo) localLogos[t.id] = t.logo; });
+          } catch(e) {}
+        }
+        APP = cloudData;
+        APP.teams.forEach(t => {
+          t.logo = localLogos[t.id] || '';
+          if (!t.baseline) t.baseline = {};
+          if (!t.colors)   t.colors   = { primary: '#e4002b', secondary: '#ffffff' };
+          Object.defineProperty(t, 'team', {
+            get() { return { name:this.name, division:this.division, season:this.season }; },
+            configurable: true
+          });
+        });
+        // Persist merged data locally
+        localStorage.setItem('lcybl_app', JSON.stringify(APP, (k,v) => k === 'team' ? undefined : v));
+      }
+      initApp();
+    } else {
+      // Signed out — show auth screen
+      document.getElementById('auth-screen').classList.add('open');
+      document.getElementById('app').style.display = 'none';
+    }
+  });
 } else {
-  document.getElementById('app').style.display = 'none';
+  // Firebase unavailable — run offline
+  document.getElementById('auth-screen').classList.remove('open');
+  initApp();
 }
 </script>
 </body>
