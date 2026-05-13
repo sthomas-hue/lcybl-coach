@@ -252,11 +252,11 @@ main{padding:16px;max-width:860px;margin:0 auto}
           <span style="font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:1px">OR</span>
           <div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
-        <input type="file" id="setup-import-input" accept=".json,application/json,text/*" style="display:none">
-        <button type="button" onclick="document.getElementById('setup-import-input').click()"
+        <input type="file" id="setup-import-input" accept=".json,application/json,text/*" style="display:none" onchange="setupImport(this)">
+        <label for="setup-import-input"
           style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;padding:11px;border:1px solid var(--border);border-radius:4px;font-size:.78rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);cursor:pointer;background:transparent">
           ↑ Import Existing Backup
-        </button>
+        </label>
       </div>
     </div>
   </div>
@@ -2388,12 +2388,23 @@ function exportData() {
 
 function setupImport(input) {
   const file = input.files && input.files[0];
+  console.log('[import] file:', file ? file.name : 'none');
   if (!file) { alert('No file detected — please try again.'); return; }
+
   const reader = new FileReader();
+
+  reader.onerror = () => {
+    alert('Could not read file: ' + (reader.error ? reader.error.message : 'unknown error'));
+  };
+
   reader.onload = (ev) => {
+    console.log('[import] file read, length:', ev.target.result.length);
+
     let d;
     try { d = JSON.parse(ev.target.result); }
-    catch(err) { alert('Could not parse file — make sure it\'s the JSON backup exported from LCYBL Coach.'); return; }
+    catch(err) { alert('Could not parse JSON: ' + err.message); return; }
+
+    console.log('[import] parsed ok, teams:', d.teams ? d.teams.length : 'none');
 
     try {
       if (d.teams && Array.isArray(d.teams) && d.teams.length) {
@@ -2403,31 +2414,31 @@ function setupImport(input) {
           season:d.team?.season||'2026', players:d.players||[], games:d.games||[], baseline:d.baseline||{} };
         APP = { currentTeamId: t.id, teams: [t] };
       } else {
-        alert('Unrecognised backup file — no teams or players found.'); return;
+        alert('Unrecognised backup — no teams or players found.'); return;
       }
 
-      // Backfill missing fields on every team
       APP.teams.forEach(t => {
-        if (!t.baseline) t.baseline = {};
-        if (!t.logo)     t.logo     = '';
-        if (!t.colors)   t.colors   = { primary: '#e4002b', secondary: '#ffffff' };
-        if (!t.players)  t.players  = [];
-        if (!t.games)    t.games    = [];
-        // Backfill missing fields on every player
+        if (!t.baseline)  t.baseline  = {};
+        if (!t.logo)      t.logo      = '';
+        if (!t.colors)    t.colors    = { primary: '#e4002b', secondary: '#ffffff' };
+        if (!t.players)   t.players   = [];
+        if (!t.games)     t.games     = [];
         t.players.forEach(p => {
-          if (!p.batting)  p.batting  = { ab:0,h:0,doubles:0,triples:0,hr:0,r:0,rbi:0,bb:0,k:0,kl:0,hbp:0,sac:0,sf:0,roe:0,fc:0,sb:0,cs:0,pik:0 };
-          if (!p.pitching) p.pitching = { appearances:0,gs:0,ip:0,bf:0,h:0,r:0,er:0,bb:0,k:0,kl:0,hbp:0,lob:0,bk:0,cs:0,sb:0,wp:0,pitches:0 };
-          if (!p.fielding) p.fielding = { po:0,a:0,e:0 };
-          if (!p.pitchLog) p.pitchLog = [];
+          if (!p.batting)   p.batting   = { ab:0,h:0,doubles:0,triples:0,hr:0,r:0,rbi:0,bb:0,k:0,kl:0,hbp:0,sac:0,sf:0,roe:0,fc:0,sb:0,cs:0,pik:0 };
+          if (!p.pitching)  p.pitching  = { appearances:0,gs:0,ip:0,bf:0,h:0,r:0,er:0,bb:0,k:0,kl:0,hbp:0,lob:0,bk:0,cs:0,sb:0,wp:0,pitches:0 };
+          if (!p.fielding)  p.fielding  = { po:0,a:0,e:0 };
+          if (!p.pitchLog)  p.pitchLog  = [];
           if (!p.positions) p.positions = [];
         });
         Object.defineProperty(t, 'team', { get() { return { name:this.name, division:this.division, season:this.season }; }, configurable:true });
       });
-    } catch(err) { alert('Error loading backup data: ' + err.message); return; }
+      console.log('[import] data ready, players:', S ? '(S not set yet)' : APP.teams[0].players.length);
+    } catch(err) { alert('Error processing backup data: ' + err.message); return; }
 
     try {
       S = APP.teams.find(t => t.id === APP.currentTeamId) || APP.teams[0];
       APP.currentTeamId = S.id;
+      console.log('[import] S set to:', S.name, '— saving...');
       save();
       document.getElementById('setup-screen').classList.remove('open');
       document.getElementById('app').style.display = 'block';
@@ -2436,8 +2447,10 @@ function setupImport(input) {
       renderTeamSwitcher();
       updateHeader();
       renderDashboard();
-    } catch(err) { alert('Import loaded but error rendering app: ' + err.message); }
+      console.log('[import] done');
+    } catch(err) { alert('Import loaded but render failed: ' + err.message); }
   };
+
   reader.readAsText(file);
 }
 
@@ -2448,25 +2461,61 @@ function importData(e) {
   reader.onload = (ev) => {
     try {
       const d = JSON.parse(ev.target.result);
-      // Accept both new multi-team format and legacy single-team format
-      if (d.teams && Array.isArray(d.teams)) {
-        confirm2('Load Backup','This will restore all teams from the backup file. Continue?', () => {
-          localStorage.setItem('lcybl_app', JSON.stringify(d));
-          location.reload();
+      if (d.teams && Array.isArray(d.teams) && d.teams.length) {
+        confirm2('Load Backup', 'This will restore all teams from the backup file. Continue?', () => {
+          applyImport(d);
         });
       } else if (d.players) {
-        // Legacy single-team backup
-        confirm2('Load Backup','Import this team\'s data? It will be added as a new team.', () => {
+        confirm2('Load Backup', 'Import this team\'s data? It will be added as a new team.', () => {
           const t = { id:uid(), name:d.team?.name||'Imported Team', division:d.team?.division||'12U Sec 1',
             season:d.team?.season||'2026', players:d.players||[], games:d.games||[], baseline:d.baseline||{} };
-          APP.teams.push(t);
-          save(); location.reload();
+          d.teams = [t]; d.currentTeamId = t.id;
+          applyImport(d);
         });
       } else { alert('Unrecognised backup file.'); }
     } catch(err) { alert('Could not read file — make sure it\'s a valid LCYBL backup.'); }
   };
   reader.readAsText(file);
-  e.target.value='';
+  e.target.value = '';
+}
+
+function applyImport(d) {
+  try {
+    APP = { currentTeamId: d.currentTeamId, teams: d.teams };
+    APP.teams.forEach(t => {
+      if (!t.baseline)  t.baseline  = {};
+      if (!t.logo)      t.logo      = '';
+      if (!t.colors)    t.colors    = { primary: '#e4002b', secondary: '#ffffff' };
+      if (!t.players)   t.players   = [];
+      if (!t.games)     t.games     = [];
+      t.players.forEach(p => {
+        if (!p.batting)   p.batting   = { ab:0,h:0,doubles:0,triples:0,hr:0,r:0,rbi:0,bb:0,k:0,kl:0,hbp:0,sac:0,sf:0,roe:0,fc:0,sb:0,cs:0,pik:0 };
+        if (!p.pitching)  p.pitching  = { appearances:0,gs:0,ip:0,bf:0,h:0,r:0,er:0,bb:0,k:0,kl:0,hbp:0,lob:0,bk:0,cs:0,sb:0,wp:0,pitches:0 };
+        if (!p.fielding)  p.fielding  = { po:0,a:0,e:0 };
+        if (!p.pitchLog)  p.pitchLog  = [];
+        if (!p.positions) p.positions = [];
+      });
+      Object.defineProperty(t, 'team', { get() { return { name:this.name, division:this.division, season:this.season }; }, configurable:true });
+    });
+    S = APP.teams.find(t => t.id === APP.currentTeamId) || APP.teams[0];
+    APP.currentTeamId = S.id;
+    save();
+    closeModal('confirm-modal');
+    recomputeSeasonTotals();
+    applyTeamColors();
+    renderTeamSwitcher();
+    updateHeader();
+    renderDashboard();
+    renderRoster();
+    renderSchedule();
+    renderAnalytics();
+    // Switch to dashboard
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('view-dashboard').classList.add('active');
+    document.querySelector('nav button').classList.add('active');
+    alert('Import complete — ' + S.players.length + ' players loaded.');
+  } catch(err) { alert('Import failed: ' + err.message); }
 }
 
 function confirmResetTeam() {
@@ -2879,11 +2928,6 @@ function initApp() {
     // setup-screen already has 'open' class from HTML — nothing to do
   }
 }
-
-// Wire setup-screen import input — must be done in JS for reliable mobile support
-document.getElementById('setup-import-input').addEventListener('change', function() {
-  setupImport(this);
-});
 
 initFirebase();
 
