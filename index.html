@@ -2174,18 +2174,26 @@ function renderField(present) {
   const assignedIds = new Set(Object.values(gdFieldAssign).filter(Boolean));
   const bench = present.filter(p=>!assignedIds.has(p.id));
   const benchWrap = document.getElementById('bench-wrap');
+  const sel = fieldClickPid;
   benchWrap.innerHTML = bench.map(p => {
-    const posStr = (p.positions||[]).join(' · ') || '—';
+    const posStr   = (p.positions||[]).join(' · ') || '—';
+    const isSelected = p.id === sel;
     return `<div class="chip" draggable="true" data-pid="${p.id}"
       ondragstart="chipDragStart(event,'${p.id}')" ondragend="chipDragEnd(event)"
-      style="flex-direction:column;align-items:center;min-width:56px;padding:5px 6px;gap:2px">
+      onclick="chipClick('${p.id}')"
+      style="flex-direction:column;align-items:center;min-width:56px;padding:5px 6px;gap:2px;cursor:pointer;
+             border:2px solid ${isSelected?'var(--accent)':'transparent'};
+             background:${isSelected?'rgba(var(--accent-rgb,228,0,43),.18)':'rgba(255,255,255,.08)'}">
       <div style="display:flex;align-items:center;gap:4px">
         <div class="chip-j">${p.jersey||'?'}</div>
         <div style="font-size:.72rem;font-weight:700">${fieldLastName(p)}</div>
       </div>
-      <div style="font-size:.58rem;color:var(--muted);font-weight:600;letter-spacing:.3px">${posStr}</div>
+      <div style="font-size:.58rem;color:${isSelected?'var(--accent)':'var(--muted)'};font-weight:600;letter-spacing:.3px">${posStr}</div>
     </div>`;
   }).join('') || '<span style="font-size:.75rem;color:var(--muted)">All players assigned</span>';
+  if (sel) {
+    benchWrap.insertAdjacentHTML('beforeend', '<div style="width:100%;font-size:.7rem;color:var(--accent);font-weight:700;margin-top:6px">↑ Tap a position on the field to assign</div>');
+  }
 }
 
 let dragPid = null;
@@ -2209,13 +2217,37 @@ function fieldDrop(e,pos) {
   gdSaveState();
 }
 
-let fieldClickPos = null;
-function fieldSlotClick(pos) {
-  // If already filled, unassign
-  if (gdFieldAssign[pos]) {
-    delete gdFieldAssign[pos];
-    const present=S.players.filter(p=>gdPresent.has(p.id));
+let fieldClickPid = null; // currently selected bench player (tap-to-assign)
+
+function chipClick(pid) {
+  const present = S.players.filter(p=>gdPresent.has(p.id));
+  if (fieldClickPid === pid) {
+    // Deselect
+    fieldClickPid = null;
     renderField(present);
+  } else {
+    fieldClickPid = pid;
+    renderField(present); // re-render to show highlight
+  }
+}
+
+function fieldSlotClick(pos) {
+  const present = S.players.filter(p=>gdPresent.has(p.id));
+  if (fieldClickPid) {
+    // Assign selected bench player to this slot
+    // Remove player from any other slot first
+    Object.keys(gdFieldAssign).forEach(p => { if (gdFieldAssign[p] === fieldClickPid) delete gdFieldAssign[p]; });
+    // If slot occupied, that player goes back to bench (just remove their assignment)
+    if (gdFieldAssign[pos]) delete gdFieldAssign[pos];
+    gdFieldAssign[pos] = fieldClickPid;
+    fieldClickPid = null;
+    renderField(present);
+    gdSaveState();
+  } else if (gdFieldAssign[pos]) {
+    // Tap an occupied slot with no selection → unassign
+    delete gdFieldAssign[pos];
+    renderField(present);
+    gdSaveState();
   }
 }
 
