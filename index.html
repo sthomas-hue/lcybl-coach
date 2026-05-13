@@ -252,10 +252,11 @@ main{padding:16px;max-width:860px;margin:0 auto}
           <span style="font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:1px">OR</span>
           <div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
-        <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;padding:11px;border:1px solid var(--border);border-radius:4px;font-size:.78rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);cursor:pointer;background:transparent">
+        <input type="file" id="setup-import-input" accept=".json,application/json,text/*" style="display:none">
+        <button type="button" onclick="document.getElementById('setup-import-input').click()"
+          style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;padding:11px;border:1px solid var(--border);border-radius:4px;font-size:.78rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);cursor:pointer;background:transparent">
           ↑ Import Existing Backup
-          <input type="file" accept=".json" style="display:none" onchange="setupImport(event)">
-        </label>
+        </button>
       </div>
     </div>
   </div>
@@ -2385,9 +2386,9 @@ function exportData() {
   a.click(); URL.revokeObjectURL(url);
 }
 
-function setupImport(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+function setupImport(input) {
+  const file = input.files && input.files[0];
+  if (!file) { alert('No file detected — please try again.'); return; }
   const reader = new FileReader();
   reader.onload = (ev) => {
     let d;
@@ -2878,6 +2879,11 @@ function initApp() {
     // setup-screen already has 'open' class from HTML — nothing to do
   }
 }
+
+// Wire setup-screen import input — must be done in JS for reliable mobile support
+document.getElementById('setup-import-input').addEventListener('change', function() {
+  setupImport(this);
+});
 
 initFirebase();
 
