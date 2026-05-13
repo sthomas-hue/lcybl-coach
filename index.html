@@ -247,6 +247,15 @@ main{padding:16px;max-width:860px;margin:0 auto}
         </div>
         <div class="fg" style="text-align:left"><label>Season Year</label><input id="setup-year" type="number" value="2026" /></div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px" onclick="doSetup()">Get Started →</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:1px">OR</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;padding:11px;border:1px solid var(--border);border-radius:4px;font-size:.78rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);cursor:pointer;background:transparent">
+          ↑ Import Existing Backup
+          <input type="file" accept=".json" style="display:none" onchange="setupImport(event)">
+        </label>
       </div>
     </div>
   </div>
@@ -2374,6 +2383,45 @@ function exportData() {
   const ts   = new Date().toISOString().slice(0,10);
   a.href=url; a.download=`lcybl-all-teams-${ts}.json`;
   a.click(); URL.revokeObjectURL(url);
+}
+
+function setupImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.teams && Array.isArray(d.teams)) {
+        APP = d;
+        APP.teams.forEach(t => {
+          if (!t.baseline) t.baseline = {};
+          if (!t.logo) t.logo = '';
+          if (!t.colors) t.colors = { primary: '#e4002b', secondary: '#ffffff' };
+          Object.defineProperty(t, 'team', { get() { return { name:this.name, division:this.division, season:this.season }; }, configurable:true });
+        });
+      } else if (d.players) {
+        const t = { id:uid(), name:d.team?.name||'Imported Team', division:d.team?.division||'12U Sec 1',
+          season:d.team?.season||'2026', players:d.players||[], games:d.games||[], baseline:d.baseline||{},
+          logo:'', colors:{ primary:'#e4002b', secondary:'#ffffff' } };
+        Object.defineProperty(t, 'team', { get() { return { name:this.name, division:this.division, season:this.season }; }, configurable:true });
+        APP = { currentTeamId: t.id, teams: [t] };
+      } else {
+        alert('Unrecognised backup file.'); return;
+      }
+      S = APP.teams.find(t => t.id === APP.currentTeamId) || APP.teams[0];
+      APP.currentTeamId = S.id;
+      save();
+      document.getElementById('setup-screen').classList.remove('open');
+      document.getElementById('app').style.display = 'block';
+      recomputeSeasonTotals();
+      applyTeamColors();
+      renderTeamSwitcher();
+      updateHeader();
+      renderDashboard();
+    } catch(err) { alert('Could not read file — make sure it\'s a valid LCYBL backup.'); }
+  };
+  reader.readAsText(file);
 }
 
 function importData(e) {
