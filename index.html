@@ -234,11 +234,6 @@ main{padding:16px;max-width:860px;margin:0 auto}
   <!-- Main content -->
   <div style="position:relative;text-align:center;max-width:380px;width:100%;z-index:2">
 
-    <!-- Season badge -->
-    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:2px;padding:5px 16px;margin-bottom:28px">
-      <span style="font-size:.58rem;font-weight:900;letter-spacing:4px;text-transform:uppercase;color:var(--gold)">LCYBL &nbsp;·&nbsp; 2026 SEASON</span>
-    </div>
-
     <!-- Two-line wordmark -->
     <div style="line-height:.88;margin-bottom:16px">
       <div style="font-size:clamp(3.5rem,16vw,6.5rem);font-weight:900;letter-spacing:-4px;text-transform:uppercase;background:linear-gradient(180deg,#fff 20%,rgba(255,255,255,.7) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-shadow:none;filter:drop-shadow(0 2px 20px rgba(0,0,0,.9))">MONEY</div>
@@ -248,7 +243,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
     <!-- Accent bar -->
     <div style="width:80px;height:2px;background:linear-gradient(90deg,transparent,var(--accent) 30%,var(--accent) 70%,transparent);margin:0 auto 20px"></div>
 
-    <p style="color:rgba(255,255,255,.38);font-size:.7rem;margin-bottom:42px;font-weight:700;letter-spacing:2px;text-transform:uppercase">Coaching Intelligence &nbsp;·&nbsp; Lancaster County</p>
+    <p style="color:rgba(255,255,255,.38);font-size:.72rem;margin-bottom:42px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;font-style:italic">Intelligence Behind Every Lineup</p>
 
     <!-- Google sign-in -->
     <button onclick="signInWithGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;background:rgba(255,255,255,.95);color:#111;border:none;padding:15px 20px;border-radius:3px;font-size:.82rem;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;cursor:pointer;box-shadow:0 8px 40px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.1)">
@@ -313,6 +308,18 @@ main{padding:16px;max-width:860px;margin:0 auto}
     </div>
     <div class="modal-body">
       <input type="hidden" id="pm-id">
+      <!-- Photo upload -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
+        <div id="pm-photo-preview" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--surface2),#000);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;cursor:pointer" onclick="document.getElementById('pm-photo-input').click()">
+          <span style="font-size:.6rem;font-weight:800;color:var(--muted);text-align:center;line-height:1.3;text-transform:uppercase;letter-spacing:.5px">Add<br>Photo</span>
+        </div>
+        <div>
+          <input type="file" id="pm-photo-input" accept="image/*" style="display:none" onchange="pmPhotoChange(this)">
+          <label for="pm-photo-input" class="btn btn-outline btn-sm" style="cursor:pointer">📷 Upload Photo</label>
+          <button id="pm-photo-clear" class="btn btn-sm" onclick="pmPhotoClear()" style="display:none;margin-left:6px;background:none;border:1px solid var(--border);color:var(--muted)">Remove</button>
+          <div style="font-size:.68rem;color:var(--muted);margin-top:5px">Tap photo to change</div>
+        </div>
+      </div>
       <div class="row2">
         <div class="fg"><label>First Name</label><input id="pm-first" placeholder="First" /></div>
         <div class="fg"><label>Last Name</label><input id="pm-last" placeholder="Last" /></div>
@@ -1482,7 +1489,12 @@ function renderRoster() {
     const alert2 = isPitcher && !st.ok ? '<div class="rc-alert" title="On pitching rest"></div>' : '';
     return `<div class="rc" onclick="openPlayerModal('${p.id}')">
       ${alert2}
-      <div class="rc-jersey">#${p.jersey||'?'}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        ${playerAvatar(p, 44)}
+        <div style="min-width:0">
+          <div class="rc-jersey" style="font-size:1.4rem;line-height:1">#${p.jersey||'?'}</div>
+        </div>
+      </div>
       <div class="rc-name">${p.name}</div>
       <div class="rc-pos">${(p.positions||[]).slice(0,3).join(' · ')||'No position'}</div>
       <div class="rc-bottom">
@@ -1493,8 +1505,64 @@ function renderRoster() {
   }).join('');
 }
 
+// ---- Player photo helpers ----
+let pmPhotoData = null; // base64 for current modal session
+
+function pmSetPhotoPreview(dataUrl) {
+  const preview = document.getElementById('pm-photo-preview');
+  const clearBtn = document.getElementById('pm-photo-clear');
+  if (dataUrl) {
+    preview.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover">`;
+    if (clearBtn) clearBtn.style.display = 'inline-flex';
+  } else {
+    preview.innerHTML = `<span style="font-size:.6rem;font-weight:800;color:var(--muted);text-align:center;line-height:1.3;text-transform:uppercase;letter-spacing:.5px">Add<br>Photo</span>`;
+    if (clearBtn) clearBtn.style.display = 'none';
+  }
+}
+
+function pmPhotoChange(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const size = Math.min(img.width, img.height, 300);
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      // Center-crop to square
+      const sx = (img.width - size) / 2, sy = (img.height - size) / 2;
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
+      pmPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+      pmSetPhotoPreview(pmPhotoData);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function pmPhotoClear() {
+  pmPhotoData = '';
+  pmSetPhotoPreview(null);
+}
+
+function playerAvatar(p, size = 48) {
+  if (p && p.photo) {
+    return `<img src="${p.photo}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;display:block;flex-shrink:0">`;
+  }
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(145deg,var(--surface2) 0%,#0a0a0a 100%);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <svg width="${Math.round(size*.55)}" height="${Math.round(size*.55)}" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="18" cy="12" r="7" fill="rgba(255,255,255,.18)"/>
+      <path d="M4 34c0-7.7 6.3-14 14-14s14 6.3 14 14" stroke="rgba(255,255,255,.14)" stroke-width="2" fill="none"/>
+    </svg>
+  </div>`;
+}
+
 function openPlayerModal(id) {
   pmPositions = [];
+  pmPhotoData = null;
   const el = (i) => document.getElementById(i);
   if (id) {
     const p = S.players.find(x=>x.id===id);
@@ -1507,12 +1575,15 @@ function openPlayerModal(id) {
     el('pm-jersey').value = p.jersey||'';
     el('pm-age').value = p.age||'';
     pmPositions = [...(p.positions||[])];
+    pmPhotoData = p.photo || null;
+    pmSetPhotoPreview(pmPhotoData);
     el('pm-delete-btn').style.display='inline-flex';
   } else {
     el('pm-title').textContent = 'Add Player';
     el('pm-id').value = '';
     el('pm-first').value = ''; el('pm-last').value = '';
     el('pm-jersey').value = ''; el('pm-age').value = '';
+    pmSetPhotoPreview(null);
     el('pm-delete-btn').style.display='none';
   }
   renderPosButtons();
@@ -1542,10 +1613,11 @@ function savePlayer() {
   const age    = document.getElementById('pm-age').value;
   if (id) {
     const p = S.players.find(x=>x.id===id);
-    if (p) { p.name=name; p.jersey=jersey; p.age=age; p.positions=[...pmPositions]; }
+    if (p) { p.name=name; p.jersey=jersey; p.age=age; p.positions=[...pmPositions]; if (pmPhotoData !== null) p.photo = pmPhotoData; }
   } else {
     S.players.push({
       id:uid(), name, jersey, age,
+      photo: pmPhotoData || '',
       positions:[...pmPositions],
       batting:{ ab:0,h:0,doubles:0,triples:0,hr:0,r:0,rbi:0,bb:0,k:0,kl:0,hbp:0,sac:0,sf:0,roe:0,fc:0,sb:0,cs:0,pik:0 },
       pitching:{ appearances:0,gs:0,ip:0,bf:0,h:0,r:0,er:0,bb:0,k:0,kl:0,hbp:0,lob:0,bk:0,cs:0,sb:0,wp:0,pitches:0 },
@@ -1942,7 +2014,8 @@ function renderAttGrid() {
     const posStr = positions.length ? positions.join(' · ') : '—';
     return `
     <div class="att-card ${gdPresent.has(p.id)?'on':''}" onclick="gdToggle('${p.id}',this)">
-      <div class="att-jersey">#${p.jersey||'?'}</div>
+      <div style="display:flex;justify-content:center;margin-bottom:5px">${playerAvatar(p, 40)}</div>
+      <div class="att-jersey" style="font-size:1.1rem">#${p.jersey||'?'}</div>
       <div class="att-name">${gdShortName(p)}</div>
       <div class="att-pos">${posStr}</div>
     </div>`;
@@ -2018,7 +2091,8 @@ function renderLineup() {
       ontouchstart="batTouchStart(event,${i})" ontouchmove="batTouchMove(event)" ontouchend="batTouchEnd(event)">
       <span class="drag-handle">⠿</span>
       <div class="bat-num">${i+1}</div>
-      <div style="flex:1">
+      ${playerAvatar(p, 34)}
+      <div style="flex:1;min-width:0">
         <div class="bat-name">${gdShortName(p)}</div>
         <div class="bat-stats">${posStr} &nbsp;·&nbsp; ${statStr}</div>
       </div>
@@ -3491,9 +3565,12 @@ function save() {
 
 function cloudSave() {
   if (!currentUser || !db) return;
-  // Strip logos — too large for Firestore (1MB doc limit); they stay in localStorage only
+  // Strip logos + player photos — too large for Firestore (1MB doc limit); stay in localStorage only
   const payload = JSON.parse(JSON.stringify(APP, (k,v) => k === 'team' ? undefined : v));
-  payload.teams.forEach(t => { t.logo = ''; });
+  payload.teams.forEach(t => {
+    t.logo = '';
+    (t.players || []).forEach(p => { p.photo = ''; });
+  });
   db.collection('users').doc(currentUser.uid)
     .set({ data: payload, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
     .catch(err => console.warn('Cloud save failed:', err));
@@ -3517,17 +3594,22 @@ function initApp() {
     APP.currentTeamId = S.id;
   }
 
-  // Restore logos from localStorage into loaded teams (logos excluded from cloud)
-  APP.teams.forEach(t => {
-    const localRaw = localStorage.getItem('lcybl_app');
-    if (localRaw) {
-      try {
-        const local = JSON.parse(localRaw);
-        const localTeam = (local.teams || []).find(lt => lt.id === t.id);
-        if (localTeam && localTeam.logo) t.logo = localTeam.logo;
-      } catch(e) {}
-    }
-  });
+  // Restore logos + player photos from localStorage (excluded from cloud due to size)
+  const _localRaw = localStorage.getItem('lcybl_app');
+  if (_localRaw) {
+    try {
+      const _local = JSON.parse(_localRaw);
+      APP.teams.forEach(t => {
+        const lt = (_local.teams || []).find(x => x.id === t.id);
+        if (!lt) return;
+        if (lt.logo) t.logo = lt.logo;
+        (t.players || []).forEach(p => {
+          const lp = (lt.players || []).find(x => x.id === p.id);
+          if (lp && lp.photo) p.photo = lp.photo;
+        });
+      });
+    } catch(e) {}
+  }
 
   if (S && S.name) {
     document.getElementById('setup-screen').classList.remove('open');
