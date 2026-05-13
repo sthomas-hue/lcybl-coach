@@ -250,6 +250,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 </head>
 <body>
 
@@ -1758,10 +1759,10 @@ function commitCrop() {
   const srcY    = -_cropY / _cropScale;
   const srcSize = CROP_SIZE / _cropScale;
   const canvas  = document.createElement('canvas');
-  canvas.width  = 300;
-  canvas.height = 300;
-  canvas.getContext('2d').drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, 300, 300);
-  pmPhotoData = canvas.toDataURL('image/jpeg', 0.85);
+  canvas.width  = 96;
+  canvas.height = 96;
+  canvas.getContext('2d').drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, 96, 96);
+  pmPhotoData = canvas.toDataURL('image/jpeg', 0.78);
   pmSetPhotoPreview(pmPhotoData);
   closeCropModal();
 }
@@ -4287,18 +4288,30 @@ const FIREBASE_CONFIG = {
 // ============================================================
 let db   = null;
 let auth = null;
+let storage = null;
 let currentUser = null;
 let cloudSaveTimer = null;
 
 function initFirebase() {
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
-    auth = firebase.auth();
-    db   = firebase.firestore();
+    auth    = firebase.auth();
+    db      = firebase.firestore();
+    storage = firebase.storage();
     db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
   } catch(e) {
     console.warn('Firebase init failed — running offline only', e);
   }
+}
+
+// Upload a base64 photo to Firebase Storage, return the download URL.
+// Path: photos/{uid}/{playerId}.jpg — scoped per user so Storage rules are simple.
+async function uploadPlayerPhoto(playerId, base64) {
+  if (!storage || !currentUser) throw new Error('Storage not ready');
+  const blob = await (await fetch(base64)).blob();
+  const ref  = storage.ref(`photos/${currentUser.uid}/${playerId}.jpg`);
+  await ref.put(blob, { contentType: 'image/jpeg' });
+  return ref.getDownloadURL();
 }
 
 // ============================================================
@@ -4358,11 +4371,10 @@ function save() {
 
 function cloudSave() {
   if (!currentUser || !db) return;
-  // Strip logos + player photos — too large for Firestore (1MB doc limit); stay in localStorage only
   const payload = JSON.parse(JSON.stringify(APP, (k,v) => k === 'team' ? undefined : v));
   payload.teams.forEach(t => {
-    t.logo = '';
-    (t.players || []).forEach(p => { p.photo = ''; });
+    t.logo = ''; // logos are large — keep local only
+    // Photos are now 96×96 JPEG (~5-8KB each) — small enough for Firestore
   });
   db.collection('users').doc(currentUser.uid)
     .set({ data: payload, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
@@ -4387,19 +4399,15 @@ function initApp() {
     APP.currentTeamId = S.id;
   }
 
-  // Restore logos + player photos from localStorage (excluded from cloud due to size)
+  // Restore logos from localStorage (too large for Firestore).
+  // Photos now sync via Firestore directly — no restore needed.
   const _localRaw = localStorage.getItem('lcybl_app');
   if (_localRaw) {
     try {
       const _local = JSON.parse(_localRaw);
       APP.teams.forEach(t => {
         const lt = (_local.teams || []).find(x => x.id === t.id);
-        if (!lt) return;
-        if (lt.logo) t.logo = lt.logo;
-        (t.players || []).forEach(p => {
-          const lp = (lt.players || []).find(x => x.id === p.id);
-          if (lp && lp.photo) p.photo = lp.photo;
-        });
+        if (lt && lt.logo) t.logo = lt.logo;
       });
     } catch(e) {}
   }
