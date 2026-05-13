@@ -551,6 +551,8 @@ main{padding:16px;max-width:860px;margin:0 auto}
         <div class="step" id="gd-step2"><div class="step-n">2</div><div class="step-lbl">Lineup</div></div>
         <div class="step-line"></div>
         <div class="step" id="gd-step3"><div class="step-n">3</div><div class="step-lbl">Field & Pitch</div></div>
+        <div class="step-line"></div>
+        <div class="step" id="gd-step4"><div class="step-n">4</div><div class="step-lbl">Game Card</div></div>
       </div>
       <div id="gd-panel1">
         <div class="card">
@@ -601,7 +603,16 @@ main{padding:16px;max-width:860px;margin:0 auto}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-outline" onclick="gdStep2()">← Back</button>
-          <button class="btn btn-ok" style="margin-left:auto" onclick="gdLogStats()">📊 Log Game Stats</button>
+          <button class="btn btn-primary" style="margin-left:auto" onclick="gdStep4()">Game Card →</button>
+          <button class="btn btn-ok" onclick="gdLogStats()">📊 Log Stats</button>
+        </div>
+      </div>
+
+      <div id="gd-panel4" style="display:none">
+        <div class="card" id="gd-card-content"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <button class="btn btn-outline" onclick="gdGoStep(3)">← Back</button>
+          <button class="btn btn-ok" style="margin-left:auto" onclick="gdLogStats()">📊 Log Stats</button>
         </div>
       </div>
     </div>
@@ -1870,18 +1881,31 @@ function initGameDay() {
   gdGoStep(1, true);
 }
 
+function gdShortName(p) {
+  const parts = (p.name || '').trim().split(/\s+/);
+  const first = parts[0] || '';
+  const last  = parts.slice(1).join(' ');
+  const init  = first ? first[0].toUpperCase() + '.' : '';
+  const name  = last ? `${init} ${last}` : first;
+  return `${name} #${p.jersey || '?'}`;
+}
+
 function renderAttGrid() {
   const grid = document.getElementById('gd-att-grid');
   if (!S.players.length) {
     grid.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Add players to your roster first</p>';
     return;
   }
-  grid.innerHTML = [...S.players].sort((a,b)=>(a.jersey|0)-(b.jersey|0)).map(p=>`
+  grid.innerHTML = [...S.players].sort((a,b)=>(a.jersey|0)-(b.jersey|0)).map(p => {
+    const positions = (p.positions || []);
+    const posStr = positions.length ? positions.join(' · ') : '—';
+    return `
     <div class="att-card ${gdPresent.has(p.id)?'on':''}" onclick="gdToggle('${p.id}',this)">
       <div class="att-jersey">#${p.jersey||'?'}</div>
-      <div class="att-name">${p.name}</div>
-      <div class="att-pos">${(p.positions||[]).slice(0,2).join(' / ')||'—'}</div>
-    </div>`).join('');
+      <div class="att-name">${gdShortName(p)}</div>
+      <div class="att-pos">${posStr}</div>
+    </div>`;
+  }).join('');
 }
 
 function gdToggle(id, el) {
@@ -1895,12 +1919,15 @@ function gdUpdateGame() {}
 
 function gdGoStep(n, skipSave) {
   gdCurrentStep = n;
-  [1,2,3].forEach(i => {
-    document.getElementById(`gd-panel${i}`).style.display = i===n?'block':'none';
+  [1,2,3,4].forEach(i => {
+    const panel = document.getElementById(`gd-panel${i}`);
+    if (panel) panel.style.display = i===n?'block':'none';
     const step = document.getElementById(`gd-step${i}`);
-    step.classList.remove('active','done');
-    if (i<n) step.classList.add('done');
-    else if (i===n) step.classList.add('active');
+    if (step) {
+      step.classList.remove('active','done');
+      if (i<n) step.classList.add('done');
+      else if (i===n) step.classList.add('active');
+    }
   });
   if (!skipSave) gdSaveState();
 }
@@ -1938,25 +1965,40 @@ function gdSetMode(m) {
 
 function renderLineup() {
   const container = document.getElementById('gd-lineup-list');
+  const n = gdLineup.length;
   container.innerHTML = gdLineup.map((p,i) => {
     const b = calcBatting(p.batting);
     const hasSt = b.pa >= 3;
     const statStr = hasSt ? `BA ${fmt(b.ba)} · OBP ${fmt(b.obp)} · OPS ${fmt(b.ops)}` : 'No stats yet';
+    const posStr  = (p.positions || []).join(' · ') || '—';
     return `<div class="bat-slot" draggable="true" data-idx="${i}"
-      ondragstart="batDragStart(event,${i})" ondragover="batDragOver(event)" ondrop="batDrop(event,${i})" ondragleave="batDragLeave(event)">
+      ondragstart="batDragStart(event,${i})" ondragend="batDragEnd(event)"
+      ondragover="batDragOver(event)" ondrop="batDrop(event,${i})" ondragleave="batDragLeave(event)">
       <span class="drag-handle">⠿</span>
       <div class="bat-num">${i+1}</div>
       <div style="flex:1">
-        <div class="bat-name">#${p.jersey} ${p.name}</div>
-        <div class="bat-stats">${statStr}</div>
+        <div class="bat-name">${gdShortName(p)}</div>
+        <div class="bat-stats">${posStr} &nbsp;·&nbsp; ${statStr}</div>
       </div>
-      <span class="bat-pos-tag">${(p.positions||[])[0]||'—'}</span>
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+        <button onclick="batMove(${i},-1)" ${i===0?'disabled':''} style="background:none;border:1px solid var(--border);color:var(--text);border-radius:3px;padding:1px 6px;cursor:pointer;font-size:.7rem;line-height:1.4">▲</button>
+        <button onclick="batMove(${i}, 1)" ${i===n-1?'disabled':''} style="background:none;border:1px solid var(--border);color:var(--text);border-radius:3px;padding:1px 6px;cursor:pointer;font-size:.7rem;line-height:1.4">▼</button>
+      </div>
     </div>`;
   }).join('');
 }
 
+function batMove(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= gdLineup.length) return;
+  [gdLineup[i], gdLineup[j]] = [gdLineup[j], gdLineup[i]];
+  renderLineup();
+  gdSaveState();
+}
+
 let batDragIdx = null;
 function batDragStart(e,i) { batDragIdx=i; e.currentTarget.style.opacity='.4'; }
+function batDragEnd(e)     { batDragIdx=null; e.currentTarget.style.opacity=''; }
 function batDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
 function batDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
 function batDrop(e,i) {
@@ -1967,6 +2009,80 @@ function batDrop(e,i) {
   batDragIdx=null;
   renderLineup();
   gdSaveState();
+}
+
+function gdStep4() {
+  renderGameCard();
+  gdGoStep(4);
+}
+
+function renderGameCard() {
+  const selGame = document.getElementById('gd-game-select').value;
+  const g       = S.games.find(x => x.id === selGame);
+  const R       = rules();
+
+  // Game header
+  let header = '';
+  if (g) {
+    const d = new Date(g.date + 'T00:00:00');
+    const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    const timeStr = g.time ? ' · ' + g.time : '';
+    header = `<div style="font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:-.3px;margin-bottom:2px">vs. ${g.opponent}</div>
+      <div style="font-size:.78rem;color:var(--muted);font-weight:600">${dateStr}${timeStr} · ${g.location||'TBD'}</div>`;
+  } else {
+    header = `<div style="font-size:1rem;font-weight:900;text-transform:uppercase">Practice</div>`;
+  }
+
+  // Batting order
+  const battingHTML = gdLineup.length ? gdLineup.map((p,i) => {
+    const posStr = (p.positions||[]).join(' · ') || '—';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="width:22px;font-size:.8rem;font-weight:900;color:var(--accent);text-align:right;flex-shrink:0">${i+1}</div>
+      <div style="flex:1">
+        <div style="font-size:.88rem;font-weight:800">${gdShortName(p)}</div>
+        <div style="font-size:.7rem;color:var(--muted)">${posStr}</div>
+      </div>
+    </div>`;
+  }).join('') : '<div style="color:var(--muted);font-size:.8rem">No lineup set</div>';
+
+  // Pitching rotation
+  const pitchHTML = gdPitchRecs.length ? gdPitchRecs.map((r,i) => {
+    const avail = r.st.ok ? `${r.st.remaining||R.pitchLimit} pitches avail` : r.st.reason;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="width:22px;font-size:.8rem;font-weight:900;color:${r.st.ok?'var(--accent)':'var(--muted)'};text-align:right;flex-shrink:0">${i+1}</div>
+      <div style="flex:1;opacity:${r.st.ok?1:.6}">
+        <div style="font-size:.88rem;font-weight:800">${gdShortName(r.p)}</div>
+        <div style="font-size:.7rem;color:var(--muted)">${avail}</div>
+      </div>
+      ${r.st.ok?'':'<span class="badge b-red" style="flex-shrink:0">Rest</span>'}
+    </div>`;
+  }).join('') : '<div style="color:var(--muted);font-size:.8rem">No pitchers assigned</div>';
+
+  // Field assignments
+  const POS_ORDER = ['P','C','1B','2B','3B','SS','LF','CF','RF'];
+  const fieldHTML = POS_ORDER.map(pos => {
+    const pid = gdFieldAssign[pos];
+    const p   = pid ? S.players.find(x => x.id === pid) : null;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <div style="width:32px;font-size:.7rem;font-weight:900;color:var(--muted);text-align:right;flex-shrink:0">${pos}</div>
+      <div style="font-size:.85rem;font-weight:700;color:${p?'var(--text)':'var(--muted)'}">${p ? gdShortName(p) : '—'}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('gd-card-content').innerHTML = `
+    <div style="margin-bottom:16px">${header}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div>
+        <div style="font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px">Batting Order</div>
+        ${battingHTML}
+      </div>
+      <div>
+        <div style="font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px">Pitching</div>
+        ${pitchHTML}
+        <div style="font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:14px 0 6px">Field</div>
+        ${fieldHTML}
+      </div>
+    </div>`;
 }
 
 function gdStep3() {
@@ -1986,30 +2102,41 @@ function gdStep3() {
 let pitchDragIdx = null;
 
 function renderPitchRecs() {
-  const R = rules();
+  const R  = rules();
   const el = document.getElementById('gd-pitch-recs');
-  if (!gdPitchRecs.length) {
-    el.innerHTML = '<div class="empty"><p>No pitchers on the present roster</p></div>';
-    return;
-  }
+  const n  = gdPitchRecs.length;
+  if (!n) { el.innerHTML = '<div class="empty"><p>No pitchers on the present roster</p></div>'; return; }
   el.innerHTML = gdPitchRecs.map((r,i) => {
     const pct   = r.st.ok ? Math.min(100,(r.st.remaining||R.pitchLimit)/R.pitchLimit*100) : 0;
     const color = pct>60?'var(--ok)':pct>30?'var(--warn)':'var(--danger)';
     return `<div class="bat-slot" draggable="true" data-idx="${i}"
-        ondragstart="pitchDragStart(event,${i})" ondragover="pitchDragOver(event)" ondrop="pitchDrop(event,${i})" ondragleave="pitchDragLeave(event)"
-        style="opacity:${r.st.ok?1:.55}">
+        ondragstart="pitchDragStart(event,${i})" ondragend="pitchDragEnd(event)"
+        ondragover="pitchDragOver(event)" ondrop="pitchDrop(event,${i})" ondragleave="pitchDragLeave(event)">
       <span class="drag-handle">⠿</span>
-      <div style="width:28px;height:28px;border-radius:50%;background:${i===0&&r.st.ok?'var(--accent)':'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0">${i===0&&r.st.ok?'★':i+1}</div>
-      <div class="pitch-info" style="flex:1">
+      <div style="width:28px;height:28px;border-radius:50%;background:${i===0&&r.st.ok?'var(--accent)':'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;opacity:${r.st.ok?1:.6}">${i===0&&r.st.ok?'★':i+1}</div>
+      <div class="pitch-info" style="flex:1;opacity:${r.st.ok?1:.6}">
         <div class="pitch-name">#${r.p.jersey} ${r.p.name} ${r.st.ok?'':'<span class="badge b-red">On Rest</span>'}</div>
         <div class="pitch-detail">${r.st.ok?`${r.st.remaining||R.pitchLimit} pitches avail · ${r.hasStats?`ERA ${fmt(r.pit.era,2)} · WHIP ${fmt(r.pit.whip,2)} · K/BB ${fmt(r.pit.kbb,1)}`:'No stats yet'}`:r.st.reason}</div>
         ${r.st.ok?`<div class="pitch-bar-wrap" style="width:100px"><div class="pitch-bar-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+        <button onclick="pitchMove(${i},-1)" ${i===0?'disabled':''} style="background:none;border:1px solid var(--border);color:var(--text);border-radius:3px;padding:1px 6px;cursor:pointer;font-size:.7rem;line-height:1.4">▲</button>
+        <button onclick="pitchMove(${i}, 1)" ${i===n-1?'disabled':''} style="background:none;border:1px solid var(--border);color:var(--text);border-radius:3px;padding:1px 6px;cursor:pointer;font-size:.7rem;line-height:1.4">▼</button>
       </div>
     </div>`;
   }).join('');
 }
 
+function pitchMove(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= gdPitchRecs.length) return;
+  [gdPitchRecs[i], gdPitchRecs[j]] = [gdPitchRecs[j], gdPitchRecs[i]];
+  renderPitchRecs();
+  gdSaveState();
+}
+
 function pitchDragStart(e,i) { pitchDragIdx=i; e.currentTarget.style.opacity='.4'; }
+function pitchDragEnd(e)     { pitchDragIdx=null; e.currentTarget.style.opacity=''; }
 function pitchDragOver(e)    { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
 function pitchDragLeave(e)   { e.currentTarget.classList.remove('drag-over'); }
 function pitchDrop(e,i) {
