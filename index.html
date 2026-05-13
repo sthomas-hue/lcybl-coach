@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LCYBL Coach</title>
+<title>Moneyball</title>
 <style>
-:root{--bg:#111;--surface:#1a1a1a;--surface2:#222;--accent:#e4002b;--accent2:#ff1f47;--text:#fff;--muted:#888;--border:#2e2e2e;--warn:#f5a623;--danger:#e4002b;--ok:#00a550;--radius:6px}
+:root{--bg:#090909;--surface:#141414;--surface2:#1c1c1c;--accent:#e4002b;--accent2:#ff1f47;--text:#fff;--muted:#777;--border:#272727;--warn:#f5a623;--danger:#e4002b;--ok:#00a550;--gold:#c9a84c;--gold2:#e8c76e;--radius:6px}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','Segoe UI',Roboto,sans-serif;background:var(--bg);background-image:repeating-linear-gradient(90deg,transparent,transparent 23px,rgba(255,255,255,.016) 23px,rgba(255,255,255,.016) 24px);color:var(--text);min-height:100vh;border-top:3px solid var(--gold)}
 /* HEADER */
-.hdr{background:#000;padding:13px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--accent)}
+.hdr{background:linear-gradient(180deg,#111 0%,#0a0a0a 100%);padding:13px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--accent);box-shadow:0 2px 20px rgba(228,0,43,.18)}
 .hdr h1{font-size:1.05rem;font-weight:900;letter-spacing:-.2px;text-transform:uppercase}
 .hdr-sub{font-size:.68rem;color:var(--muted);margin-top:2px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
 .hdr-right{font-size:.75rem;color:var(--muted);text-align:right}
 /* NAV */
-nav{background:#000;display:flex;overflow-x:auto;border-bottom:1px solid var(--border);scrollbar-width:none}
+nav{background:linear-gradient(180deg,#0e0e0e 0%,#080808 100%);display:flex;overflow-x:auto;border-bottom:1px solid var(--border);scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
 nav button{flex:1;min-width:58px;padding:10px 4px;background:none;border:none;color:var(--muted);font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap}
-nav button.active{color:var(--text);border-bottom-color:var(--accent)}
+nav button.active{color:#fff;border-bottom-color:var(--accent);text-shadow:0 0 12px rgba(228,0,43,.4)}
 /* Hamburger nav — mobile only */
 .nav-ham{display:none}
 @media(max-width:600px){
@@ -34,11 +34,11 @@ nav button:hover{color:var(--text)}
 main{padding:16px;max-width:860px;margin:0 auto}
 .view{display:none}.view.active{display:block}
 /* CARD */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 4px 24px rgba(0,0,0,.4)}
 .card-title{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px}
 /* BUTTONS */
 .btn{padding:10px 20px;border-radius:3px;border:none;font-size:.78rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 12px rgba(228,0,43,.3)}.btn-primary:hover{background:var(--accent2);box-shadow:0 4px 20px rgba(228,0,43,.5)}
 .btn-ok{background:var(--ok);color:#fff}
 .btn-outline{background:none;border:2px solid var(--muted);color:var(--text)}.btn-outline:hover{border-color:var(--text)}
 .btn-sm{padding:5px 12px;font-size:.7rem}
@@ -55,7 +55,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
 /* MODAL */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;align-items:center;justify-content:center;padding:16px}
 .overlay.open{display:flex}
-.modal{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);width:100%;max-width:480px;max-height:92vh;overflow-y:auto}
+.modal{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);width:100%;max-width:480px;max-height:92vh;overflow-y:auto;box-shadow:0 12px 60px rgba(0,0,0,.7)}
 .modal-hdr{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .modal-hdr h2{font-size:.9rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px}
 .modal-body{padding:18px}
@@ -136,11 +136,11 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .drag-handle{color:var(--border);font-size:1rem;cursor:grab;padding:0 3px}
 /* FIELD */
 .field-wrap{position:relative;width:100%;max-width:460px;margin:0 auto}
-.field-bg{position:relative;width:100%;padding-bottom:88%;background:radial-gradient(ellipse at 50% 105%,#2a5c24 0%,#1c3f17 55%,#152e11 100%);border-radius:50% 50% 8px 8px / 40% 40% 8px 8px;overflow:hidden;border:2px solid #1c3f17}
-.field-infield{position:absolute;bottom:14%;left:50%;transform:translateX(-50%);width:46%;height:46%;background:#8B6914;opacity:.35;clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%)}
+.field-bg{position:relative;width:100%;padding-bottom:105%;background:radial-gradient(ellipse at 50% 105%,#2a5c24 0%,#1c3f17 55%,#152e11 100%);border-radius:50% 50% 8px 8px / 40% 40% 8px 8px;overflow:hidden;border:2px solid #1c3f17}
+.field-infield{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);width:46%;height:42%;background:#8B6914;opacity:.35;clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%)}
 .field-lines{position:absolute;inset:0}
 .pos-slot{position:absolute;transform:translate(-50%,-50%);z-index:2}
-.pos-drop{width:62px;height:48px;border:2px dashed rgba(255,255,255,.25);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .15s;cursor:pointer;background:rgba(0,0,0,.25)}
+.pos-drop{width:52px;height:40px;border:2px dashed rgba(255,255,255,.25);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .15s;cursor:pointer;background:rgba(0,0,0,.25)}
 .pos-drop:hover{border-color:rgba(255,255,255,.6);background:rgba(0,0,0,.4)}
 .pos-drop.filled{border-color:rgba(0,165,80,.7);background:rgba(0,165,80,.15)}
 .pos-drop.drag-over{border-color:var(--accent);background:rgba(228,0,43,.2)}
@@ -170,7 +170,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .sc input:focus{outline:none;border-color:var(--text)}
 /* ANALYTICS */
 .stat-highlight-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
-.shl{text-align:center;padding:14px 6px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)}
+.shl{text-align:center;padding:14px 6px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.3)}
 .shl-val{font-size:1.4rem;font-weight:900;line-height:1;letter-spacing:-.5px}
 .shl-lbl{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:800;margin-top:4px}
 /* SETUP PAGE */
@@ -195,7 +195,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .sortable-ghost{opacity:.3}
 /* DASHBOARD WIDGETS */
 .widget-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px}
-.widget{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.widget{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 2px 16px rgba(0,0,0,.35)}
 .widget-lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:800}
 .widget-val{font-size:1.9rem;font-weight:900;margin-top:4px;line-height:1;letter-spacing:-1px}
 .widget-sub{font-size:.68rem;color:var(--muted);margin-top:4px;font-weight:600}
@@ -217,29 +217,42 @@ main{padding:16px;max-width:860px;margin:0 auto}
 <body>
 
 <!-- AUTH SCREEN -->
-<div id="auth-screen" class="overlay open" style="z-index:9999;background:#000">
-  <div class="modal" style="max-width:360px;text-align:center">
-    <div class="modal-body" style="padding:40px 30px">
-      <div style="font-size:3rem;margin-bottom:16px">⚾</div>
-      <h1 style="font-size:1.4rem;font-weight:900;letter-spacing:-.5px;text-transform:uppercase;margin-bottom:6px">LCYBL Coach</h1>
-      <p style="color:var(--muted);font-size:.82rem;margin-bottom:32px">Sign in to sync your teams across devices</p>
-      <button onclick="signInWithGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#111;border:none;padding:13px 20px;border-radius:4px;font-size:.9rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-        Sign in with Google
-      </button>
-      <p id="auth-error" style="color:var(--danger);font-size:.75rem;margin-top:14px;display:none"></p>
-      <p style="color:var(--muted);font-size:.7rem;margin-top:24px;line-height:1.6">Your data is saved to the cloud and stays private to your account.</p>
+<div id="auth-screen" class="overlay open" style="z-index:9999;background:radial-gradient(ellipse at 50% 0%,#1a0a0a 0%,#0a0505 40%,#000 100%);flex-direction:column;align-items:center;justify-content:center;padding:24px">
+  <!-- stadium light beam -->
+  <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:300px;height:260px;background:radial-gradient(ellipse at 50% 0%,rgba(228,0,43,.12) 0%,transparent 70%);pointer-events:none"></div>
+  <!-- stitch marks -->
+  <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:1rem;color:rgba(255,255,255,.06);letter-spacing:24px;user-select:none">· · · · · · · · · · · · ·</div>
+
+  <div style="position:relative;text-align:center;max-width:340px;width:100%">
+    <!-- wordmark -->
+    <div style="margin-bottom:6px">
+      <span style="font-size:.7rem;font-weight:900;letter-spacing:4px;text-transform:uppercase;color:var(--gold);opacity:.85">LCYBL · 2026</span>
     </div>
+    <h1 style="font-size:3.4rem;font-weight:900;letter-spacing:-2px;text-transform:uppercase;line-height:1;margin-bottom:4px;background:linear-gradient(180deg,#fff 40%,rgba(255,255,255,.55) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">MONEY<wbr>BALL</h1>
+    <div style="width:48px;height:3px;background:var(--accent);margin:10px auto 16px;border-radius:2px"></div>
+    <p style="color:rgba(255,255,255,.4);font-size:.78rem;margin-bottom:36px;font-weight:600;letter-spacing:.5px">Sign in to sync your roster across devices</p>
+
+    <button onclick="signInWithGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#111;border:none;padding:14px 20px;border-radius:4px;font-size:.85rem;font-weight:900;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 24px rgba(0,0,0,.5)">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Sign in with Google
+    </button>
+    <p id="auth-error" style="color:var(--danger);font-size:.75rem;margin-top:14px;display:none"></p>
+    <p style="color:rgba(255,255,255,.25);font-size:.68rem;margin-top:28px;line-height:1.7;letter-spacing:.3px">Your data is encrypted and stays private to your account.</p>
   </div>
+
+  <!-- bottom field art -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:90px;background:linear-gradient(180deg,transparent 0%,rgba(20,60,15,.18) 60%,rgba(15,40,10,.35) 100%);pointer-events:none"></div>
+  <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:320px;height:50px;border-radius:50% 50% 0 0;background:rgba(30,80,20,.15);pointer-events:none"></div>
 </div>
 
 <!-- SETUP SCREEN -->
 <div id="setup-screen" class="overlay open">
-  <div class="modal" style="max-width:420px">
+  <div class="modal" style="max-width:420px;border-color:rgba(201,168,76,.2);box-shadow:0 8px 48px rgba(0,0,0,.7)">
     <div class="modal-body">
       <div class="setup-page" style="margin:0;padding:10px 0 6px">
-        <div class="setup-logo">⚾</div>
-        <h1>LCYBL Coach</h1>
+        <div class="setup-logo" style="font-size:2.6rem;margin-bottom:8px">⚾</div>
+        <div style="font-size:.62rem;font-weight:900;letter-spacing:4px;color:var(--gold);margin-bottom:4px">LCYBL · 2026</div>
+        <h1 style="font-size:2.4rem;letter-spacing:-1.5px;background:linear-gradient(180deg,#fff 40%,rgba(255,255,255,.6) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Moneyball</h1>
         <p>Lancaster County Youth Baseball<br>Set up your team to get started</p>
         <div class="fg" style="text-align:left"><label>Team Name</label><input id="setup-team" placeholder="e.g. Eagles" /></div>
         <div class="fg" style="text-align:left"><label>Division</label>
@@ -1114,16 +1127,16 @@ function pitcherRecs(players, gameDate) {
 
 // FIELDING ASSIGNMENT ENGINE
 const FIELD_POS = {
-  P:  { label:'P',  name:'Pitcher',  x:50, y:56 },
-  C:  { label:'C',  name:'Catcher',  x:50, y:79 },
-  '1B':{ label:'1B', name:'First',   x:72, y:53 },
-  '2B':{ label:'2B', name:'Second',  x:61, y:41 },
-  '3B':{ label:'3B', name:'Third',   x:28, y:53 },
-  SS: { label:'SS', name:'Short',    x:40, y:43 },
-  LF: { label:'LF', name:'Left',     x:18, y:26 },
-  CF: { label:'CF', name:'Center',   x:50, y:14 },
-  RF: { label:'RF', name:'Right',    x:82, y:26 },
-  '4OF':{ label:'4OF', name:'4th OF', x:32, y:12 }
+  P:    { label:'P',   name:'Pitcher', x:50, y:55 },
+  C:    { label:'C',   name:'Catcher', x:50, y:78 },
+  '1B': { label:'1B',  name:'First',   x:78, y:50 },
+  '2B': { label:'2B',  name:'Second',  x:63, y:36 },
+  '3B': { label:'3B',  name:'Third',   x:22, y:50 },
+  SS:   { label:'SS',  name:'Short',   x:37, y:36 },
+  LF:   { label:'LF',  name:'Left',    x:12, y:21 },
+  CF:   { label:'CF',  name:'Center',  x:50, y:10 },
+  RF:   { label:'RF',  name:'Right',   x:88, y:21 },
+  '4OF':{ label:'4OF', name:'4th OF',  x:30, y:8  }
 };
 
 function autoAssignField(players) {
@@ -3122,7 +3135,7 @@ John Smith,7,0,0,0,0,0,0,0,0,0,0,0,0,0
 Jane Doe,12,0,0,0,0,0,0,0,0,0,0,0,0,0`;
   const pit = `Player,#,App,IP,BF,H,ER,BB,K,Pitches
 John Smith,7,0,0,0,0,0,0,0,0`;
-  const content = `LCYBL Coach — Manual Stats Template\n\n=== BATTING (paste into Batting CSV tab) ===\n${bat}\n\n=== PITCHING (paste into Pitching CSV tab) ===\n${pit}\n\nInstructions:\n1. Fill in your player stats above\n2. Copy the BATTING section and paste it into the "Import from GameChanger" > Batting CSV tab\n3. Copy the PITCHING section and paste it into the Pitching CSV tab\n4. Click Preview then Import\n`;
+  const content = `Moneyball — Manual Stats Template\n\n=== BATTING (paste into Batting CSV tab) ===\n${bat}\n\n=== PITCHING (paste into Pitching CSV tab) ===\n${pit}\n\nInstructions:\n1. Fill in your player stats above\n2. Copy the BATTING section and paste it into the "Import from GameChanger" > Batting CSV tab\n3. Copy the PITCHING section and paste it into the Pitching CSV tab\n4. Click Preview then Import\n`;
   const blob = new Blob([content], {type:'text/plain'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href=url; a.download='lcybl-stats-template.txt'; a.click();
