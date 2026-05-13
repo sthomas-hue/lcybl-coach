@@ -18,6 +18,17 @@ nav{background:#000;display:flex;overflow-x:auto;border-bottom:1px solid var(--b
 nav::-webkit-scrollbar{display:none}
 nav button{flex:1;min-width:58px;padding:10px 4px;background:none;border:none;color:var(--muted);font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap}
 nav button.active{color:var(--text);border-bottom-color:var(--accent)}
+/* Hamburger nav — mobile only */
+.nav-ham{display:none}
+@media(max-width:600px){
+  nav{position:relative;overflow:visible}
+  nav button:not(.nav-ham){display:none}
+  nav.open{flex-direction:column;border-bottom:2px solid var(--accent)}
+  nav.open button:not(.nav-ham){display:flex;width:100%;text-align:left;padding:14px 20px;font-size:.8rem;letter-spacing:.5px;border-bottom:1px solid var(--border);border-left:4px solid transparent;min-width:unset;flex:none}
+  nav.open button.active:not(.nav-ham){color:var(--text);border-left-color:var(--accent);border-bottom-color:var(--border);background:rgba(255,255,255,.04)}
+  .nav-ham{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 18px;background:none;border:none;border-bottom:2px solid var(--border);color:var(--text);cursor:pointer;font-weight:800;font-size:.72rem;text-transform:uppercase;letter-spacing:.5px}
+  nav.open .nav-ham{border-bottom-color:var(--border)}
+}
 nav button:hover{color:var(--text)}
 /* MAIN */
 main{padding:16px;max-width:860px;margin:0 auto}
@@ -486,7 +497,11 @@ main{padding:16px;max-width:860px;margin:0 auto}
       </div>
     </div>
   </header>
-  <nav>
+  <nav id="main-nav">
+    <button class="nav-ham" onclick="navToggle()">
+      <span id="nav-current-lbl">Home</span>
+      <span>☰</span>
+    </button>
     <button class="active" onclick="showView('dashboard',this)">Home</button>
     <button onclick="showView('roster',this)">Roster</button>
     <button onclick="showView('schedule',this)">Schedule</button>
@@ -1123,11 +1138,19 @@ function autoAssignField(players) {
 // ============================================================
 // UI HELPERS
 // ============================================================
+function navToggle() {
+  document.getElementById('main-nav').classList.toggle('open');
+}
+
 function showView(id, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('view-'+id).classList.add('active');
   if (btn) btn.classList.add('active');
+  // Update hamburger label and close menu
+  const lbl = document.getElementById('nav-current-lbl');
+  if (lbl && btn) lbl.textContent = btn.textContent;
+  document.getElementById('main-nav').classList.remove('open');
   if (id==='dashboard') renderDashboard();
   if (id==='roster') renderRoster();
   if (id==='schedule') renderSchedule();
