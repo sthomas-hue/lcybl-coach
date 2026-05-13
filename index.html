@@ -3300,7 +3300,7 @@ async function imgLibUpload(input) {
   renderImgLibrary();
   initAuthBg();
 }
-// Preset baseball/stadium images from Unsplash (stable CDN, no key needed)
+// Fallback preset baseball/stadium images from Unsplash
 const PRESET_IMAGES = [
   'https://images.unsplash.com/photo-1566577739112-5180d4bf9390',
   'https://images.unsplash.com/photo-1508344928928-7d7f616f9bf4',
@@ -3311,6 +3311,18 @@ const PRESET_IMAGES = [
   'https://images.unsplash.com/photo-1517927033932-b3d18e61fb3a',
   'https://images.unsplash.com/photo-1489824904134-891ab64532f1',
 ].map(u => u + '?w=1600&q=78&auto=format&fit=crop');
+
+const GITHUB_ASSETS_API = 'https://api.github.com/repos/sthomas-hue/lcybl-coach/contents/assets';
+const IMAGE_EXTS = /\.(jpe?g|png|webp|gif|avif)$/i;
+
+async function fetchGitHubAssets() {
+  try {
+    const res = await fetch(GITHUB_ASSETS_API, { headers: { Accept: 'application/vnd.github.v3+json' } });
+    if (!res.ok) return [];
+    const files = await res.json();
+    return files.filter(f => IMAGE_EXTS.test(f.name)).map(f => f.download_url);
+  } catch { return []; }
+}
 
 function tryLoadBg(el, urls, idx) {
   if (idx >= urls.length) return; // all failed — leave CSS gradient
@@ -3360,14 +3372,24 @@ async function renderImgLibrary() {
 async function initAuthBg() {
   const el = document.getElementById('auth-bg-img');
   if (!el) return;
-  // Personal uploads take priority; fall back to shuffled presets
+
+  // 1. Personal device uploads take top priority
   const personal = await imgLibGetAll();
   if (personal.length) {
     const pick = personal[Math.floor(Math.random() * personal.length)];
     el.style.backgroundImage = `url(${pick.dataUrl})`;
     return;
   }
-  // Shuffle presets so it rotates each visit
+
+  // 2. GitHub assets folder — random pick from whatever you've uploaded there
+  const ghAssets = await fetchGitHubAssets();
+  if (ghAssets.length) {
+    const pick = ghAssets[Math.floor(Math.random() * ghAssets.length)];
+    tryLoadBg(el, [pick], 0);
+    return;
+  }
+
+  // 3. Unsplash presets as final fallback
   const shuffled = [...PRESET_IMAGES].sort(() => Math.random() - 0.5);
   tryLoadBg(el, shuffled, 0);
 }
