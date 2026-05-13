@@ -1116,9 +1116,10 @@ function pitchStatus(player, gameDate) {
     const av = new Date(l.date + 'T00:00:00');
     av.setDate(av.getDate() + rd + 1);
     if (todayD < av) {
+      const daysLeft = Math.ceil((av - todayD) / (1000*60*60*24));
       const avStr = av.toLocaleDateString('en-US',{month:'short',day:'numeric'});
       const lStr  = new Date(l.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-      return { ok:false, remaining:0, reason:`Rest – available ${avStr} (threw ${l.count}P on ${lStr})` };
+      return { ok:false, remaining:0, daysLeft, avStr, reason:`Avail ${avStr} · threw ${l.count}P on ${lStr}` };
     }
   }
   // Same-day already thrown
@@ -1634,9 +1635,13 @@ function renderRoster() {
     const hasSt = b.pa >= 3;
     const st = pitchStatus(p, today());
     const isPitcher = p.positions && p.positions.includes('P');
-    const alert2 = isPitcher && !st.ok ? '<div class="rc-alert" title="On pitching rest"></div>' : '';
+    const restBadge = isPitcher && !st.ok
+      ? `<div style="position:absolute;top:8px;right:8px;background:rgba(228,0,43,.15);border:1px solid rgba(228,0,43,.4);border-radius:3px;padding:2px 6px;display:flex;flex-direction:column;align-items:center;line-height:1.2">
+           <span style="font-size:.9rem;font-weight:900;color:var(--warn)">${st.daysLeft}</span>
+           <span style="font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">d rest</span>
+         </div>` : '';
     return `<div class="rc" onclick="openPlayerModal('${p.id}')">
-      ${alert2}
+      ${restBadge}
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
         ${playerAvatar(p, 44)}
         <div style="min-width:0">
@@ -2196,7 +2201,7 @@ let gdPresent = new Set();
 let gdLineup = [];
 let gdMode = 'all';
 let gdFieldAssign = {};
-let gdPitchRecs = [];
+let gdPitchRecs = [], gdOnRestRecs = [];
 let gdCurrentStep = 1;
 let dragSrcPlayer = null;
 let dragSrcSlot = null;
@@ -2527,11 +2532,13 @@ function gdStep3() {
   const g = S.games.find(x=>x.id===selGame);
   const gd = g ? g.date : today();
 
-  gdPitchRecs = pitcherRecs(present.filter(p=>p.positions&&p.positions.includes('P')), gd);
+  const _allRecs = pitcherRecs(present.filter(p=>p.positions&&p.positions.includes('P')), gd);
+  gdPitchRecs   = _allRecs.filter(r => r.st.ok);
+  gdOnRestRecs  = _allRecs.filter(r => !r.st.ok);
   renderPitchRecs();
 
   gdFieldAssign = autoAssignField(present);
-  // Override P slot with whoever is #1 in the pitching order
+  // Override P slot with highest-ranked AVAILABLE pitcher
   const starter = gdPitchRecs[0];
   if (starter) {
     Object.keys(gdFieldAssign).forEach(pos => { if (gdFieldAssign[pos] === starter.p.id) delete gdFieldAssign[pos]; });
@@ -2547,27 +2554,56 @@ function renderPitchRecs() {
   const R  = rules();
   const el = document.getElementById('gd-pitch-recs');
   const n  = gdPitchRecs.length;
-  if (!n) { el.innerHTML = '<div class="empty"><p>No pitchers on the present roster</p></div>'; return; }
-  el.innerHTML = gdPitchRecs.map((r,i) => {
-    const pct   = r.st.ok ? Math.min(100,(r.st.remaining||R.pitchLimit)/R.pitchLimit*100) : 0;
+
+  const availHTML = n ? gdPitchRecs.map((r,i) => {
+    const pct   = Math.min(100,(r.st.remaining||R.pitchLimit)/R.pitchLimit*100);
     const color = pct>60?'var(--ok)':pct>30?'var(--warn)':'var(--danger)';
     return `<div class="bat-slot" draggable="true" data-idx="${i}"
         ondragstart="pitchDragStart(event,${i})" ondragend="pitchDragEnd(event)"
         ondragover="pitchDragOver(event)" ondrop="pitchDrop(event,${i})" ondragleave="pitchDragLeave(event)"
         ontouchstart="pitchTouchStart(event,${i})" ontouchmove="pitchTouchMove(event)" ontouchend="pitchTouchEnd(event)">
       <span class="drag-handle">⠿</span>
-      <div style="width:28px;height:28px;border-radius:50%;background:${i===0&&r.st.ok?'var(--accent)':'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;opacity:${r.st.ok?1:.6}">${i===0&&r.st.ok?'★':i+1}</div>
-      <div class="pitch-info" style="flex:1;opacity:${r.st.ok?1:.6}">
-        <div class="pitch-name">#${r.p.jersey} ${r.p.name} ${r.st.ok?'':'<span class="badge b-red">On Rest</span>'}</div>
-        <div class="pitch-detail">${r.st.ok?`${r.st.remaining||R.pitchLimit} pitches avail · ${r.hasStats?`ERA ${fmt(r.pit.era,2)} · WHIP ${fmt(r.pit.whip,2)} · K/BB ${fmt(r.pit.kbb,1)}`:'No stats yet'}`:r.st.reason}</div>
-        ${r.st.ok?`<div class="pitch-bar-wrap" style="width:100px"><div class="pitch-bar-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
+      <div style="width:28px;height:28px;border-radius:50%;background:${i===0?'var(--accent)':'var(--border)'};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0">${i===0?'★':i+1}</div>
+      <div class="pitch-info" style="flex:1">
+        <div class="pitch-name">#${r.p.jersey} ${r.p.name}</div>
+        <div class="pitch-detail">${r.st.remaining||R.pitchLimit} pitches avail · ${r.hasStats?`ERA ${fmt(r.pit.era,2)} · WHIP ${fmt(r.pit.whip,2)} · K/BB ${fmt(r.pit.kbb,1)}`:'No stats yet'}</div>
+        <div class="pitch-bar-wrap" style="width:100px"><div class="pitch-bar-fill" style="width:${pct}%;background:${color}"></div></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
         <button onclick="pitchMove(${i},-1)" ${i===0?'disabled':''} style="background:none;border:1px solid var(--border);color:var(--text);border-radius:3px;padding:1px 6px;cursor:pointer;font-size:.7rem;line-height:1.4">▲</button>
         <button onclick="pitchMove(${i}, 1)" ${i===n-1?'disabled':''} style="background:none;border:1px solid var(--border);color:var(--text);border-radius:3px;padding:1px 6px;cursor:pointer;font-size:.7rem;line-height:1.4">▼</button>
       </div>
     </div>`;
-  }).join('');
+  }).join('') : '<div style="color:var(--muted);font-size:.82rem;padding:8px 0">No pitchers available today</div>';
+
+  const restHTML = gdOnRestRecs.length ? `
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">On Rest — Not Available Today</div>
+      ${gdOnRestRecs.map(r => `
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+          ${playerAvatar(r.p, 32)}
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.82rem;font-weight:700">#${r.p.jersey} ${r.p.name}</div>
+            <div style="font-size:.7rem;color:var(--muted)">${r.st.reason}</div>
+          </div>
+          <div style="flex-shrink:0;text-align:right">
+            <div style="font-size:1.1rem;font-weight:900;color:var(--warn);line-height:1">${r.st.daysLeft}</div>
+            <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">day${r.st.daysLeft===1?'':'s'} left</div>
+          </div>
+        </div>`).join('')}
+    </div>` : '';
+
+  el.innerHTML = availHTML + restHTML;
+}
+
+function syncStarterToField() {
+  const starter = gdPitchRecs[0];
+  if (!starter) return;
+  // Remove this pitcher from any other position, then assign P
+  Object.keys(gdFieldAssign).forEach(pos => { if (gdFieldAssign[pos] === starter.p.id) delete gdFieldAssign[pos]; });
+  gdFieldAssign['P'] = starter.p.id;
+  // Re-render field if it's currently visible (step 4)
+  if (gdCurrentStep === 4) renderField();
 }
 
 function pitchMove(i, dir) {
@@ -2575,6 +2611,7 @@ function pitchMove(i, dir) {
   if (j < 0 || j >= gdPitchRecs.length) return;
   [gdPitchRecs[i], gdPitchRecs[j]] = [gdPitchRecs[j], gdPitchRecs[i]];
   renderPitchRecs();
+  syncStarterToField();
   gdSaveState();
 }
 
@@ -2589,6 +2626,7 @@ function pitchDrop(e,i) {
   gdPitchRecs.splice(i,0,item);
   pitchDragIdx=null;
   renderPitchRecs();
+  syncStarterToField();
   gdSaveState();
 }
 
@@ -2613,6 +2651,7 @@ function pitchTouchEnd(e) {
       const item = gdPitchRecs.splice(pitchTouchIdx, 1)[0];
       gdPitchRecs.splice(toIdx, 0, item);
       renderPitchRecs();
+      syncStarterToField();
       gdSaveState();
     }
   }
