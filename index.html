@@ -259,9 +259,6 @@ main{padding:16px;max-width:860px;margin:0 auto}
     <p style="color:rgba(255,255,255,.18);font-size:.65rem;margin-top:32px;letter-spacing:.5px">Your data is private and synced to your account.</p>
   </div>
 
-  <!-- Bottom field arc -->
-  <div style="position:absolute;bottom:-40px;left:50%;transform:translateX(-50%);width:150%;height:180px;border-radius:50%;border-top:1px solid rgba(255,255,255,.05);background:linear-gradient(180deg,rgba(15,50,10,.2) 0%,rgba(8,30,5,.4) 100%);pointer-events:none"></div>
-
   <!-- Corner logo mark -->
   <div style="position:absolute;bottom:18px;right:20px;font-size:.58rem;font-weight:900;letter-spacing:2px;color:rgba(255,255,255,.15);text-transform:uppercase">Moneyball ⚾</div>
 </div>
@@ -509,7 +506,8 @@ main{padding:16px;max-width:860px;margin:0 auto}
 </div>
 
 <!-- MAIN APP -->
-<div id="app" style="display:none">
+<div id="app-bg-photo" style="position:fixed;inset:0;background-size:cover;background-position:center top;filter:brightness(0.11) saturate(0.25) contrast(1.15);z-index:0;pointer-events:none;transition:opacity 1s"></div>
+<div id="app" style="display:none;position:relative;z-index:1">
   <header class="hdr">
     <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">
       <div id="hdr-logo" style="width:40px;height:40px;border-radius:50%;border:2px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;overflow:hidden;background-size:cover;background-position:center">⚾</div>
@@ -3325,9 +3323,14 @@ async function fetchGitHubAssets() {
 }
 
 function tryLoadBg(el, urls, idx) {
-  if (idx >= urls.length) return; // all failed — leave CSS gradient
+  if (idx >= urls.length) return;
   const img = new Image();
-  img.onload = () => { el.style.backgroundImage = `url(${urls[idx]})`; };
+  img.onload = () => {
+    const url = `url(${urls[idx]})`;
+    el.style.backgroundImage = url;
+    const appBg = document.getElementById('app-bg-photo');
+    if (appBg) appBg.style.backgroundImage = url;
+  };
   img.onerror = () => tryLoadBg(el, urls, idx + 1);
   img.src = urls[idx];
 }
@@ -3369,15 +3372,19 @@ async function renderImgLibrary() {
   grid.innerHTML = presetHtml + personalHtml;
 }
 
-async function initAuthBg() {
-  const el = document.getElementById('auth-bg-img');
-  if (!el) return;
+function applyBg(url) {
+  const authEl = document.getElementById('auth-bg-img');
+  const appEl  = document.getElementById('app-bg-photo');
+  if (authEl) authEl.style.backgroundImage = url;
+  if (appEl)  appEl.style.backgroundImage  = url;
+}
 
+async function initAuthBg() {
   // 1. Personal device uploads take top priority
   const personal = await imgLibGetAll();
   if (personal.length) {
     const pick = personal[Math.floor(Math.random() * personal.length)];
-    el.style.backgroundImage = `url(${pick.dataUrl})`;
+    applyBg(`url(${pick.dataUrl})`);
     return;
   }
 
@@ -3385,13 +3392,13 @@ async function initAuthBg() {
   const ghAssets = await fetchGitHubAssets();
   if (ghAssets.length) {
     const pick = ghAssets[Math.floor(Math.random() * ghAssets.length)];
-    tryLoadBg(el, [pick], 0);
+    tryLoadBg(document.getElementById('auth-bg-img'), [pick], 0);
     return;
   }
 
   // 3. Unsplash presets as final fallback
   const shuffled = [...PRESET_IMAGES].sort(() => Math.random() - 0.5);
-  tryLoadBg(el, shuffled, 0);
+  tryLoadBg(document.getElementById('auth-bg-img'), shuffled, 0);
 }
 // Run on page load so auth screen has a photo immediately
 initAuthBg();
