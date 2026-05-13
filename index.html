@@ -893,8 +893,24 @@ function calcBatting(b) {
 function ipToDecimal(ip) {
   if (!ip) return 0;
   const whole = Math.floor(ip);
-  const outs  = Math.round((ip - whole) * 10); // .1 → 1 out, .2 → 2 outs
+  const dec   = ip - whole;
+  // Use thresholds — more robust than multiply+round for float imprecision
+  const outs  = dec < 0.05 ? 0 : dec < 0.15 ? 1 : 2;
   return whole + outs / 3;
+}
+// Convert baseball IP to raw out count and back — needed for correct accumulation
+// (3.2 + 3.2 must yield 7.1, not 7.4)
+function ipToOuts(ip) {
+  if (!ip) return 0;
+  const whole = Math.floor(ip);
+  const dec   = ip - whole;
+  const outs  = dec < 0.05 ? 0 : dec < 0.15 ? 1 : 2;
+  return whole * 3 + outs;
+}
+function outsToIP(outs) {
+  const innings  = Math.floor(outs / 3);
+  const remainder = outs % 3;
+  return innings + remainder * 0.1;
 }
 
 function calcPitching(p) {
@@ -1634,25 +1650,29 @@ function saveStats() {
 // Called after any edit so totals are always correct regardless of order.
 function recomputeSeasonTotals() {
   const BAT_KEYS = ['ab','h','doubles','triples','hr','r','rbi','bb','k','kl','hbp','sac','sf','roe','fc','sb','cs','pik'];
-  const PIT_KEYS = ['ip','gs','bf','h','r','er','bb','k','kl','hbp','lob','bk','cs','sb','wp','pitches'];
+  // IP excluded — accumulated in outs to avoid 3.2+3.2=7.4 notation bug
+  const PIT_KEYS = ['gs','bf','h','r','er','bb','k','kl','hbp','lob','bk','cs','sb','wp','pitches'];
   const FLD_KEYS = ['po','a','e'];
 
   S.players.forEach(p => {
     BAT_KEYS.forEach(k => p.batting[k] = 0);
     PIT_KEYS.forEach(k => p.pitching[k] = 0);
+    p.pitching.ip = 0;
     FLD_KEYS.forEach(k => p.fielding[k] = 0);
     p.pitching.appearances = 0;
     p.pitchLog = [];
 
-    // Layer 1: baseline (manually entered / imported season stats)
-    const bl = S.baseline[p.id] || {};
+    const bl  = S.baseline[p.id] || {};
     const blb = bl.batting  || {};
     const blp = bl.pitching || {};
-    BAT_KEYS.forEach(k => { p.batting[k]  += (blb[k]||0); });
+
+    // Layer 1: baseline
+    BAT_KEYS.forEach(k => { p.batting[k] += (blb[k]||0); });
     PIT_KEYS.forEach(k => { p.pitching[k] += (blp[k]||0); });
+    let totalOuts = ipToOuts(blp.ip || 0);
     if ((blp.ip||0) > 0) p.pitching.appearances += 1;
 
-    // Layer 2: individual game logs
+    // Layer 2: game logs
     S.games.forEach(g => {
       if (!g.gameStats || !g.gameStats[p.id]) return;
       const gs  = g.gameStats[p.id];
@@ -1665,6 +1685,7 @@ function recomputeSeasonTotals() {
 
       if (p.positions && p.positions.includes('P')) {
         PIT_KEYS.forEach(k => { p.pitching[k] += (pit[k]||0); });
+        totalOuts += ipToOuts(pit.ip || 0);
         if ((pit.ip||0) > 0) p.pitching.appearances += 1;
         if ((pit.pitches||0) > 0) {
           const entry = p.pitchLog.find(l => l.date === g.date);
@@ -1673,6 +1694,8 @@ function recomputeSeasonTotals() {
         }
       }
     });
+
+    p.pitching.ip = outsToIP(totalOuts);
   });
 }
 
