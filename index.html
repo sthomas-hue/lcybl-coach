@@ -148,7 +148,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .pos-player{font-size:.6rem;color:#fff;max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;line-height:1.2;margin-top:1px}
 /* BENCH CHIPS */
 .bench-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;min-height:36px;padding:8px;border:1px dashed var(--border);border-radius:var(--radius);background:rgba(0,0,0,.2)}
-.chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:4px 10px;font-size:.73rem;font-weight:700;cursor:grab;user-select:none;transition:all .15s}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:4px 10px;font-size:.73rem;font-weight:700;cursor:pointer;user-select:none;transition:all .15s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .chip:hover{border-color:var(--accent)}
 .chip.dragging{opacity:.4}
 .chip-j{background:var(--accent);color:#fff;width:18px;height:18px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:900;flex-shrink:0}
@@ -2180,6 +2180,7 @@ function renderField(present) {
     const isSelected = p.id === sel;
     return `<div class="chip" draggable="true" data-pid="${p.id}"
       ondragstart="chipDragStart(event,'${p.id}')" ondragend="chipDragEnd(event)"
+      ontouchstart="chipClick('${p.id}');event.preventDefault()"
       onclick="chipClick('${p.id}')"
       style="flex-direction:column;align-items:center;min-width:56px;padding:5px 6px;gap:2px;cursor:pointer;
              border:2px solid ${isSelected?'var(--accent)':'transparent'};
