@@ -2108,6 +2108,12 @@ function gdStep3() {
   renderPitchRecs();
 
   gdFieldAssign = autoAssignField(present);
+  // Override P slot with the designated starter (first eligible pitcher in the order)
+  const starter = gdPitchRecs.find(r => r.st.ok);
+  if (starter) {
+    Object.keys(gdFieldAssign).forEach(pos => { if (gdFieldAssign[pos] === starter.p.id) delete gdFieldAssign[pos]; });
+    gdFieldAssign['P'] = starter.p.id;
+  }
   renderField(present);
   gdGoStep(3);
 }
