@@ -5883,9 +5883,11 @@ const _watchCode = _urlP.get('watch');
 const _teamCode  = _urlP.get('team');
 
 if (_watchCode) {
+  document.getElementById('auth-screen').classList.remove('open');
   hideSplash();
   initSpectatorMode(_watchCode);
 } else if (_teamCode) {
+  document.getElementById('auth-screen').classList.remove('open');
   hideSplash();
   initTeamPageMode(_teamCode);
 } else if (auth) {
