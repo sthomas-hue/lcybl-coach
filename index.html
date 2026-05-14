@@ -456,37 +456,50 @@ main{padding:16px;max-width:860px;margin:0 auto}
       <svg viewBox="0 0 100 100" width="92" height="92"
            style="animation:splashSpin 11s linear infinite;display:block;margin:0 auto;filter:drop-shadow(0 10px 40px rgba(0,0,0,.95)) drop-shadow(0 0 24px rgba(228,0,43,.25))">
         <defs>
-          <radialGradient id="sp-ball" cx="38%" cy="32%" r="62%">
-            <stop offset="0%" stop-color="#ffffff"/>
-            <stop offset="55%" stop-color="#f4ede6"/>
-            <stop offset="100%" stop-color="#d5c8bc"/>
+          <radialGradient id="sp-ball" cx="40%" cy="35%" r="65%">
+            <stop offset="0%" stop-color="#fffdf5"/>
+            <stop offset="35%" stop-color="#f5e8d4"/>
+            <stop offset="70%" stop-color="#e5cfb4"/>
+            <stop offset="100%" stop-color="#c4a882"/>
           </radialGradient>
-          <radialGradient id="sp-shine" cx="32%" cy="26%" r="48%">
-            <stop offset="0%" stop-color="rgba(255,255,255,.55)"/>
+          <radialGradient id="sp-rim" cx="50%" cy="50%" r="50%">
+            <stop offset="60%" stop-color="rgba(0,0,0,0)"/>
+            <stop offset="100%" stop-color="rgba(30,10,0,.5)"/>
+          </radialGradient>
+          <radialGradient id="sp-spec" cx="33%" cy="27%" r="32%">
+            <stop offset="0%" stop-color="rgba(255,255,255,.7)"/>
             <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
           </radialGradient>
         </defs>
-        <!-- Ball body -->
-        <circle cx="50" cy="50" r="44" fill="url(#sp-ball)" stroke="#c0b5a8" stroke-width="1.5"/>
-        <!-- Shine -->
-        <ellipse cx="38" cy="35" rx="15" ry="10" fill="url(#sp-shine)"/>
-        <!-- Left seam arc -->
-        <path d="M34 12 C18 30 18 70 34 88" fill="none" stroke="#bf2121" stroke-width="2.6" stroke-linecap="round"/>
-        <!-- Right seam arc -->
-        <path d="M66 12 C82 30 82 70 66 88" fill="none" stroke="#bf2121" stroke-width="2.6" stroke-linecap="round"/>
-        <!-- Left stitches -->
-        <g stroke="#bf2121" stroke-width="1.8" stroke-linecap="round">
-          <line x1="30" y1="22" x2="38" y2="20"/><line x1="28" y1="31" x2="36" y2="30"/>
-          <line x1="27" y1="41" x2="35" y2="41"/><line x1="27" y1="51" x2="35" y2="52"/>
-          <line x1="28" y1="61" x2="36" y2="63"/><line x1="30" y1="71" x2="38" y2="74"/>
-          <line x1="32" y1="80" x2="39" y2="83"/>
+        <!-- Leather body -->
+        <circle cx="50" cy="50" r="44" fill="url(#sp-ball)" stroke="#b89060" stroke-width=".8"/>
+        <!-- Rim depth shadow -->
+        <circle cx="50" cy="50" r="44" fill="url(#sp-rim)"/>
+        <!-- Specular highlight -->
+        <ellipse cx="36" cy="33" rx="12" ry="8" fill="url(#sp-spec)"/>
+        <!-- Left seam — true S-curve bezier -->
+        <path d="M 40 7 C 19 17, 6 33, 10 50 C 14 68, 25 82, 40 93"
+              fill="none" stroke="#b52020" stroke-width="2.3" stroke-linecap="round"/>
+        <!-- Right seam — mirror S-curve -->
+        <path d="M 60 7 C 81 17, 94 33, 90 50 C 86 68, 75 82, 60 93"
+              fill="none" stroke="#b52020" stroke-width="2.3" stroke-linecap="round"/>
+        <!-- Left stitches — crossing the seam in pairs, angle follows curve -->
+        <g stroke="#b52020" stroke-width="1.6" stroke-linecap="round">
+          <line x1="33" y1="10" x2="38" y2="16"/><line x1="30" y1="13" x2="35" y2="19"/>
+          <line x1="21" y1="23" x2="26" y2="29"/><line x1="18" y1="27" x2="23" y2="33"/>
+          <line x1="9"  y1="42" x2="15" y2="44"/><line x1="9"  y1="47" x2="15" y2="49"/>
+          <line x1="9"  y1="53" x2="15" y2="55"/><line x1="9"  y1="58" x2="15" y2="60"/>
+          <line x1="16" y1="68" x2="21" y2="74"/><line x1="13" y1="72" x2="18" y2="78"/>
+          <line x1="28" y1="83" x2="33" y2="89"/><line x1="25" y1="87" x2="30" y2="92"/>
         </g>
-        <!-- Right stitches -->
-        <g stroke="#bf2121" stroke-width="1.8" stroke-linecap="round">
-          <line x1="70" y1="22" x2="62" y2="20"/><line x1="72" y1="31" x2="64" y2="30"/>
-          <line x1="73" y1="41" x2="65" y2="41"/><line x1="73" y1="51" x2="65" y2="52"/>
-          <line x1="72" y1="61" x2="64" y2="63"/><line x1="70" y1="71" x2="62" y2="74"/>
-          <line x1="68" y1="80" x2="61" y2="83"/>
+        <!-- Right stitches — mirror of left -->
+        <g stroke="#b52020" stroke-width="1.6" stroke-linecap="round">
+          <line x1="67" y1="10" x2="62" y2="16"/><line x1="70" y1="13" x2="65" y2="19"/>
+          <line x1="79" y1="23" x2="74" y2="29"/><line x1="82" y1="27" x2="77" y2="33"/>
+          <line x1="91" y1="42" x2="85" y2="44"/><line x1="91" y1="47" x2="85" y2="49"/>
+          <line x1="91" y1="53" x2="85" y2="55"/><line x1="91" y1="58" x2="85" y2="60"/>
+          <line x1="84" y1="68" x2="79" y2="74"/><line x1="87" y1="72" x2="82" y2="78"/>
+          <line x1="72" y1="83" x2="67" y2="89"/><line x1="75" y1="87" x2="70" y2="92"/>
         </g>
       </svg>
     </div>
@@ -1187,7 +1200,6 @@ main{padding:16px;max-width:860px;margin:0 auto}
             <div style="display:flex;gap:4px;margin-top:3px">
               <button class="live-half-btn" onclick="liveUndo()" id="live-undo-half-btn" style="opacity:.5" title="Undo last action">↩</button>
               <button class="live-half-btn" onclick="liveNextInning()">End Half ▶</button>
-              <button class="live-half-btn" onclick="openShareSheet()" title="Share live view">📤</button>
             </div>
           </div>
           <div class="live-score-side">
@@ -1197,6 +1209,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
               <span class="live-score-num" id="live-them-score">0</span>
               <button class="live-sc-btn" style="background:none;border:1px solid var(--border);color:var(--muted)" onclick="liveScore('them',1)">+</button>
             </div>
+            <button class="live-half-btn" onclick="openShareSheet()" title="Share live view" style="margin-top:5px;font-size:.7rem;padding:4px 10px">📤 Share</button>
           </div>
         </div>
 
@@ -2702,6 +2715,11 @@ function gdRestoreState() {
         }
         renderPitchRecs();
         renderField(present);
+      } else if (st.step === 4) {
+        renderGameCard();
+      } else if (st.step === 5) {
+        renderGameCard();
+        renderLiveMode();
       }
     } else {
       gdGoStep(1, true);
