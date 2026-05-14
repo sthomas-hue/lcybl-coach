@@ -212,15 +212,58 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .bsm-btn{padding:5px 11px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.65rem;font-weight:800;letter-spacing:.4px;text-transform:uppercase;cursor:pointer;transition:all .15s;white-space:nowrap}
 .bsm-btn.bsm-on{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 10px rgba(228,0,43,.3)}
 /* LIVE GAME */
-.live-out{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);color:var(--border);display:flex;align-items:center;justify-content:center;font-size:.7rem;cursor:pointer;transition:all .15s;line-height:1;user-select:none}
-.live-out.on{border-color:var(--warn);color:var(--warn)}
-.live-batter-row{padding:10px 12px;border-radius:var(--radius);border:2px solid transparent;margin-bottom:4px;display:flex;align-items:center;gap:8px;background:var(--surface2);transition:all .15s}
-.live-batter-row.active{border-color:var(--accent);background:rgba(228,0,43,.08);box-shadow:0 0 0 1px rgba(228,0,43,.2)}
-.live-ab-btn{padding:3px 8px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.65rem;font-weight:800;cursor:pointer;transition:all .15s;letter-spacing:.3px;text-transform:uppercase}
-.live-ab-btn:hover{border-color:var(--text);color:var(--text)}
-.live-ab-btn.hit{border-color:var(--ok);color:var(--ok)}
-.live-ab-btn.out{border-color:var(--danger);color:var(--danger)}
-.live-ab-btn.walk{border-color:var(--gold);color:var(--gold)}
+.live-bar{background:linear-gradient(180deg,#111 0%,#0a0a0a 100%);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:8px}
+.live-score-side{display:flex;flex-direction:column;align-items:center;gap:4px}
+.live-score-lbl{font-size:.55rem;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.live-score-num{font-size:2.4rem;font-weight:900;letter-spacing:-2px;line-height:1}
+.live-score-btns{display:flex;align-items:center;gap:6px}
+.live-sc-btn{border:none;border-radius:3px;cursor:pointer;font-size:.9rem;font-weight:900;width:28px;height:28px;line-height:1;transition:all .15s}
+.live-mid{display:flex;flex-direction:column;align-items:center;gap:5px}
+.live-inning-badge{font-size:.75rem;font-weight:900;color:var(--gold);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.live-outs{display:flex;gap:5px}
+.live-out-dot{width:14px;height:14px;border-radius:50%;border:2px solid #333;cursor:pointer;transition:all .15s;flex-shrink:0}
+.live-out-dot.on{background:var(--warn);border-color:var(--warn);box-shadow:0 0 6px rgba(245,166,35,.5)}
+.live-half-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.live-half-btn:hover{border-color:var(--gold);color:var(--gold)}
+/* At-bat card */
+.live-batter-hdr{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.live-batter-info h3{font-size:1rem;font-weight:900;margin:0 0 2px;letter-spacing:-.3px}
+.live-batter-info .sub-info{font-size:.68rem;color:var(--muted);font-weight:700}
+.live-outcome-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.live-ab-btn{padding:10px 4px;border-radius:4px;border:1px solid;background:none;font-size:.72rem;font-weight:900;cursor:pointer;transition:all .15s;letter-spacing:.4px;text-transform:uppercase;text-align:center;min-height:40px;line-height:1}
+.live-ab-btn.hit{border-color:rgba(0,165,80,.5);color:#00d466;background:rgba(0,165,80,.07)}
+.live-ab-btn.hit:hover,.live-ab-btn.hit:active{background:rgba(0,165,80,.2);border-color:var(--ok)}
+.live-ab-btn.out{border-color:rgba(228,0,43,.4);color:#ff6680;background:rgba(228,0,43,.07)}
+.live-ab-btn.out:hover,.live-ab-btn.out:active{background:rgba(228,0,43,.18);border-color:var(--accent)}
+.live-ab-btn.walk{border-color:rgba(201,168,76,.4);color:var(--gold2);background:rgba(201,168,76,.07)}
+.live-ab-btn.walk:hover,.live-ab-btn.walk:active{background:rgba(201,168,76,.18);border-color:var(--gold)}
+.live-ab-btn.neutral{border-color:var(--border);color:var(--muted)}
+.live-ab-btn.neutral:hover{border-color:var(--text);color:var(--text)}
+.live-batter-nav{display:flex;gap:8px;margin-top:4px}
+.live-batter-nav button{flex:1;padding:8px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.7rem;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:.4px;transition:all .15s}
+.live-batter-nav button.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 10px rgba(228,0,43,.3)}
+/* Pitcher strip */
+.live-pitch-strip{display:flex;align-items:center;gap:10px}
+.live-pitch-info{flex:1;min-width:0}
+.live-pitch-name{font-size:.88rem;font-weight:800;margin-bottom:4px}
+.live-pitch-bar{height:7px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:3px}
+.live-pitch-fill{height:100%;border-radius:4px;transition:width .3s}
+.live-pitch-count{font-size:.68rem;color:var(--muted)}
+.live-pitch-btns{display:flex;flex-direction:column;gap:3px;align-items:center;flex-shrink:0}
+.live-swap-btn{background:none;border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:3px;cursor:pointer;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;transition:all .15s}
+.live-swap-btn:hover{border-color:var(--gold);color:var(--gold)}
+/* Lineup & Defense tabs */
+.live-player-row{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.04)}
+.live-player-row:last-child{border-bottom:none}
+.live-player-row.is-batter{background:rgba(228,0,43,.07);border-left:3px solid var(--accent)}
+.live-player-row:not(.is-batter){border-left:3px solid transparent}
+.live-row-num{font-size:.72rem;font-weight:900;color:var(--muted);width:16px;flex-shrink:0;text-align:right}
+.live-row-num.cur{color:var(--accent)}
+.live-def-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.04)}
+.live-def-row:last-child{border-bottom:none}
+.live-pos-badge{width:30px;font-size:.65rem;font-weight:900;color:var(--muted);text-align:right;flex-shrink:0;text-transform:uppercase;letter-spacing:.5px}
+.live-change-btn{padding:4px 9px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.62rem;font-weight:800;cursor:pointer;white-space:nowrap;text-transform:uppercase;letter-spacing:.3px;transition:all .15s;flex-shrink:0}
+.live-change-btn:hover{border-color:var(--text);color:var(--text)}
 /* PRINT */
 @media print{
   body>*:not(#report-overlay){display:none!important}
@@ -746,46 +789,61 @@ main{padding:16px;max-width:860px;margin:0 auto}
 
       <!-- LIVE GAME PANEL -->
       <div id="gd-panel5" style="display:none">
-        <!-- Scoreboard -->
-        <div class="card" style="padding:12px 14px;margin-bottom:8px">
-          <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;text-align:center">
-            <div>
-              <div style="font-size:.58rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px" id="live-us-lbl">US</div>
-              <div style="display:flex;align-items:center;justify-content:center;gap:10px">
-                <button onclick="liveScore('us',-1)" style="background:none;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:3px;cursor:pointer;font-size:1rem;line-height:1">−</button>
-                <span id="live-us-score" style="font-size:2.8rem;font-weight:900;letter-spacing:-2px;line-height:1">0</span>
-                <button onclick="liveScore('us',1)" style="background:var(--accent);border:none;color:#fff;width:28px;height:28px;border-radius:3px;cursor:pointer;font-size:1rem;line-height:1">+</button>
-              </div>
+        <!-- Scoreboard bar -->
+        <div class="live-bar">
+          <div class="live-score-side">
+            <div class="live-score-lbl" id="live-us-lbl">US</div>
+            <div class="live-score-btns">
+              <button class="live-sc-btn" style="background:none;border:1px solid var(--border);color:var(--muted)" onclick="liveScore('us',-1)">−</button>
+              <span class="live-score-num" id="live-us-score">0</span>
+              <button class="live-sc-btn" style="background:var(--accent);color:#fff" onclick="liveScore('us',1)">+</button>
             </div>
-            <div style="text-align:center">
-              <div id="live-inning-lbl" style="font-size:.7rem;font-weight:900;color:var(--gold);text-transform:uppercase;letter-spacing:1px">Top 1st</div>
-              <div style="display:flex;gap:5px;justify-content:center;margin-top:6px">
-                <div id="live-out0" class="live-out" onclick="liveOuts(0)">●</div>
-                <div id="live-out1" class="live-out" onclick="liveOuts(1)">●</div>
-                <div id="live-out2" class="live-out" onclick="liveOuts(2)">●</div>
-              </div>
-              <button onclick="liveNextInning()" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--muted);padding:3px 10px;border-radius:3px;cursor:pointer;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px">Next Inning ▶</button>
+          </div>
+          <div class="live-mid">
+            <div class="live-inning-badge" id="live-inning-lbl">▲ 1st</div>
+            <div class="live-outs">
+              <div class="live-out-dot" id="live-out0" onclick="liveOuts(0)" title="Out 1"></div>
+              <div class="live-out-dot" id="live-out1" onclick="liveOuts(1)" title="Out 2"></div>
+              <div class="live-out-dot" id="live-out2" onclick="liveOuts(2)" title="Out 3"></div>
             </div>
-            <div>
-              <div style="font-size:.58rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px" id="live-them-lbl">THEM</div>
-              <div style="display:flex;align-items:center;justify-content:center;gap:10px">
-                <button onclick="liveScore('them',-1)" style="background:none;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:3px;cursor:pointer;font-size:1rem;line-height:1">−</button>
-                <span id="live-them-score" style="font-size:2.8rem;font-weight:900;letter-spacing:-2px;line-height:1">0</span>
-                <button onclick="liveScore('them',1)" style="background:none;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:3px;cursor:pointer;font-size:1rem;line-height:1">+</button>
-              </div>
+            <button class="live-half-btn" onclick="liveNextInning()">End Half ▶</button>
+          </div>
+          <div class="live-score-side">
+            <div class="live-score-lbl" id="live-them-lbl">THEM</div>
+            <div class="live-score-btns">
+              <button class="live-sc-btn" style="background:none;border:1px solid var(--border);color:var(--muted)" onclick="liveScore('them',-1)">−</button>
+              <span class="live-score-num" id="live-them-score">0</span>
+              <button class="live-sc-btn" style="background:none;border:1px solid var(--border);color:var(--muted)" onclick="liveScore('them',1)">+</button>
             </div>
           </div>
         </div>
-        <!-- Pitcher tracker -->
-        <div class="card" style="padding:12px 14px;margin-bottom:8px" id="live-pitcher-card"></div>
-        <!-- Batting order -->
-        <div class="card" style="padding:12px 14px;margin-bottom:8px">
-          <div class="card-title">Batting Order</div>
-          <div id="live-lineup-list"></div>
+
+        <!-- At-bat card -->
+        <div class="card" style="padding:14px;margin-bottom:8px" id="live-ab-card">
+          <div style="font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">At Bat</div>
+          <div class="live-batter-hdr" id="live-batter-hdr"></div>
+          <div class="live-outcome-grid" id="live-outcome-grid"></div>
+          <div class="live-batter-nav">
+            <button onclick="livePrevBatter()">◁ Prev</button>
+            <button onclick="liveSkipBatter()" class="neutral">Skip</button>
+            <button onclick="liveNextBatter()" class="primary">Next ▶</button>
+          </div>
         </div>
-        <!-- Bench -->
-        <div class="card" style="padding:10px 14px;margin-bottom:8px" id="live-bench-card"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+
+        <!-- Pitcher strip -->
+        <div class="card" style="padding:12px 14px;margin-bottom:8px" id="live-pitch-card"></div>
+
+        <!-- Lineup / Defense tabs -->
+        <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;margin-bottom:0">
+          <button id="ltab-lineup" onclick="showLiveTab('lineup')" style="flex:1;padding:9px 6px;background:var(--surface);border:none;color:var(--text);font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.6px;cursor:pointer;border-bottom:2px solid var(--accent)">📋 Lineup</button>
+          <button id="ltab-field"  onclick="showLiveTab('field')"  style="flex:1;padding:9px 6px;background:var(--surface2);border:none;color:var(--muted);font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.6px;cursor:pointer;border-bottom:2px solid transparent;border-left:1px solid var(--border)">🏟 Defense</button>
+        </div>
+        <div class="card" style="border-radius:0 0 var(--radius) var(--radius);border-top:none;padding:0;margin-bottom:8px">
+          <div id="live-tab-lineup"><div id="live-lineup-list"></div></div>
+          <div id="live-tab-field" style="display:none"><div id="live-field-grid"></div></div>
+        </div>
+
+        <div style="display:flex;gap:8px">
           <button class="btn btn-outline" onclick="gdGoStep(4)">← Card</button>
           <button class="btn btn-ok" style="margin-left:auto" onclick="gdLogStats()">📊 Log Stats</button>
         </div>
@@ -3721,124 +3779,203 @@ function applyBatSortMode(present, mode) {
 // ============================================================
 let gdLiveState = {
   usScore:0, themScore:0, inning:1, topBottom:'top', outs:0,
-  batterIdx:0, pitchCounts:{}, subs:{}
+  batterIdx:0, pitchCounts:{}, subs:{}, fieldSubs:{}, lastResult:{}
 };
+let _liveTab = 'lineup';
 
 function gdStartLive() {
-  // Pull opponent name from selected game
   const selGame = document.getElementById('gd-game-select').value;
   const g = S.games.find(x => x.id === selGame);
-  document.getElementById('live-us-lbl').textContent   = S.name || 'US';
-  document.getElementById('live-them-lbl').textContent = g ? g.opponent : 'THEM';
+  document.getElementById('live-us-lbl').textContent   = (S.name || 'US').toUpperCase().slice(0,8);
+  document.getElementById('live-them-lbl').textContent = g ? (g.opponent||'THEM').toUpperCase().slice(0,8) : 'THEM';
   gdLiveState = { usScore:0, themScore:0, inning:1, topBottom:'top', outs:0,
-                  batterIdx:0, pitchCounts:{}, subs:{} };
+                  batterIdx:0, pitchCounts:{}, subs:{}, fieldSubs:{}, lastResult:{}, log:[] };
+  _liveTab = 'lineup';
   renderLiveMode();
   gdGoStep(5);
 }
 
 function renderLiveMode() {
   renderLiveInning();
+  renderLiveAB();
   renderLivePitcher();
   renderLiveLineup();
-  renderLiveBench();
+  renderLiveField();
 }
 
 function renderLiveInning() {
-  const top   = gdLiveState.topBottom === 'top';
-  const ord   = ['1st','2nd','3rd','4th','5th','6th','7th'][gdLiveState.inning-1] || gdLiveState.inning+'th';
-  document.getElementById('live-inning-lbl').textContent = (top?'▲ Top ':'▼ Bot ') + ord;
+  const top = gdLiveState.topBottom === 'top';
+  const ord = ['1st','2nd','3rd','4th','5th','6th','7th'][gdLiveState.inning-1] || gdLiveState.inning+'th';
+  document.getElementById('live-inning-lbl').textContent = (top ? '▲ ' : '▼ ') + ord;
   document.getElementById('live-us-score').textContent   = gdLiveState.usScore;
   document.getElementById('live-them-score').textContent = gdLiveState.themScore;
-  [0,1,2].forEach(i => {
-    const el = document.getElementById('live-out'+i);
-    el.classList.toggle('on', i < gdLiveState.outs);
-  });
+  [0,1,2].forEach(i => document.getElementById('live-out'+i).classList.toggle('on', i < gdLiveState.outs));
+}
+
+let _liveShowMore = false;
+
+function renderLiveAB() {
+  const card = document.getElementById('live-ab-card');
+  const idx  = gdLiveState.batterIdx;
+  const slot = gdLineup[idx];
+  if (!slot) { card.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:8px 0">No lineup set</div>'; return; }
+  const subId  = gdLiveState.subs[slot.id];
+  const batter = subId ? (S.players.find(x=>x.id===subId)||slot) : slot;
+  const b      = calcBatting(batter.batting);
+  const hasSt  = b.pa >= 3;
+  const lastRes = gdLiveState.lastResult[idx];
+  const canUndo = (gdLiveState.log||[]).length > 0;
+
+  const MAIN = [
+    {label:'1B',cls:'hit'},{label:'2B',cls:'hit'},{label:'3B',cls:'hit'},{label:'HR',cls:'hit'},
+    {label:'BB',cls:'walk'},{label:'HBP',cls:'walk'},{label:'ROE',cls:'walk'},{label:'FC',cls:'neutral'},
+    {label:'K',cls:'out'},{label:'K-L',cls:'out'},{label:'FO',cls:'out'},{label:'GO',cls:'out'},
+  ];
+  const MORE = [
+    {label:'LO',cls:'out'},{label:'DP',cls:'out'},{label:'Sac',cls:'out'},{label:'SF',cls:'neutral'},
+    {label:'E',cls:'out'},{label:'CI',cls:'neutral'},
+  ];
+  const ADVANCES = [
+    {label:'WP',tip:'Wild Pitch'},{label:'PB',tip:'Passed Ball'},{label:'Balk',tip:'Balk'},
+    {label:'SB',tip:'Stolen Base'},{label:'CS',tip:'Caught Stealing'},{label:'PIK',tip:'Pickoff'},
+  ];
+
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)">At Bat — ${idx+1} of ${gdLineup.length}</span>
+      <button onclick="openPlayLog()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:3px 9px;border-radius:3px;cursor:pointer;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px">📋 Log</button>
+    </div>
+    <div class="live-batter-hdr">
+      ${playerAvatar(batter, 44)}
+      <div class="live-batter-info" style="flex:1;min-width:0">
+        <h3>#${batter.jersey||'?'} ${batter.name}${subId?'<span style="font-size:.58rem;color:var(--gold);margin-left:6px;font-weight:700">SUB</span>':''}</h3>
+        <div class="sub-info">${(batter.positions||[]).slice(0,3).join(' · ')||'—'}</div>
+        <div class="sub-info" style="margin-top:1px">${hasSt?`${fmt(b.ba)} AVG · ${fmt(b.obp)} OBP`:''}</div>
+        ${lastRes?`<div style="margin-top:5px"><span class="badge ${lastRes.cls}">${lastRes.label} last result</span></div>`:''}
+      </div>
+      <button class="live-change-btn" onclick="liveSubBatterModal(${idx})" style="align-self:flex-start">Sub ↕</button>
+    </div>
+    <div class="live-outcome-grid" style="margin-bottom:6px">
+      ${MAIN.map(o=>`<button class="live-ab-btn ${o.cls}" onclick="liveAB('${o.label}','${o.cls}')">${o.label}</button>`).join('')}
+    </div>
+    <button onclick="_liveShowMore=!_liveShowMore;renderLiveAB()" style="width:100%;background:none;border:1px solid var(--border);color:var(--muted);padding:5px;border-radius:3px;cursor:pointer;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:${_liveShowMore?'6px':'0'}">${_liveShowMore?'▲ Less':'▾ More Outs — LO · DP · Sac · SF · E'}</button>
+    ${_liveShowMore?`<div class="live-outcome-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:6px">
+      ${MORE.map(o=>`<button class="live-ab-btn ${o.cls}" onclick="liveAB('${o.label}','${o.cls}')">${o.label}</button>`).join('')}
+    </div>`:''}
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <div style="font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px">Advances / Events <span style="font-weight:500;letter-spacing:0;text-transform:none">(don't advance batter)</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${ADVANCES.map(a=>`<button class="live-ab-btn neutral" title="${a.tip}" onclick="liveLogField('${a.label}')" style="padding:6px 10px;flex:1;min-width:48px">${a.label}</button>`).join('')}
+      </div>
+    </div>
+    <div class="live-batter-nav" style="margin-top:10px">
+      <button onclick="liveUndo()" ${canUndo?'':'disabled'} style="opacity:${canUndo?1:.35}">↩ Undo</button>
+      <button onclick="livePrevBatter()">◁ Prev</button>
+      <button onclick="liveSkipBatter()">Skip</button>
+      <button onclick="liveNextBatter()" class="primary">Next ▶</button>
+    </div>`;
 }
 
 function renderLivePitcher() {
-  const card = document.getElementById('live-pitcher-card');
+  const card = document.getElementById('live-pitch-card');
   const pitcherId = gdFieldAssign['P'];
   const pitcher   = pitcherId ? S.players.find(p => p.id === pitcherId) : null;
   const R         = rules();
-  if (!pitcher) { card.innerHTML = '<div style="font-size:.8rem;color:var(--muted)">No pitcher assigned</div>'; return; }
-  const thrown  = gdLiveState.pitchCounts[pitcher.id] || 0;
-  const limit   = R.pitchLimit;
-  const pct     = Math.min(100, thrown / limit * 100);
-  const color   = pct<60?'var(--ok)':pct<85?'var(--warn)':'var(--danger)';
-  const st      = pitchStatus(pitcher, today());
-  const remaining = Math.max(0, (st.remaining || limit) - thrown);
+  if (!pitcher) {
+    card.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:.8rem;color:var(--muted)">No pitcher assigned</span>
+      <button class="live-swap-btn" onclick="livePitcherSwap()">Assign Pitcher</button>
+    </div>`;
+    return;
+  }
+  const thrown    = gdLiveState.pitchCounts[pitcher.id] || 0;
+  const limit     = R.pitchLimit;
+  const pct       = Math.min(100, thrown / limit * 100);
+  const color     = pct<60?'var(--ok)':pct<85?'var(--warn)':'var(--danger)';
+  const remaining = Math.max(0, limit - thrown);
   card.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px">
-      ${playerAvatar(pitcher, 38)}
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.88rem;font-weight:800">${gdShortName(pitcher)} <span style="font-size:.65rem;font-weight:600;color:var(--muted)">pitcher</span></div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-          <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .3s"></div>
-          </div>
-          <span style="font-size:.75rem;font-weight:800;color:${color};flex-shrink:0">${thrown}/${limit}</span>
-        </div>
-        <div style="font-size:.65rem;color:var(--muted);margin-top:2px">${remaining} pitches remaining this game</div>
+    <div class="live-pitch-strip">
+      ${playerAvatar(pitcher, 36)}
+      <div class="live-pitch-info">
+        <div class="live-pitch-name">#${pitcher.jersey} ${pitcher.name} <span style="font-size:.62rem;color:var(--muted);font-weight:600">P</span></div>
+        <div class="live-pitch-bar"><div class="live-pitch-fill" style="width:${pct}%;background:${color}"></div></div>
+        <div class="live-pitch-count" style="color:${color}">${thrown} pitches · ${remaining} left</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-        <button onclick="liveAddPitch(1)" style="background:var(--accent);border:none;color:#fff;width:36px;height:36px;border-radius:4px;cursor:pointer;font-size:1.1rem;font-weight:900;box-shadow:0 2px 8px rgba(228,0,43,.3)">+</button>
-        <button onclick="liveAddPitch(-1)" style="background:none;border:1px solid var(--border);color:var(--muted);width:36px;height:22px;border-radius:3px;cursor:pointer;font-size:.7rem;line-height:1">−</button>
+      <div class="live-pitch-btns">
+        <button onclick="liveAddPitch(1)" style="background:var(--accent);border:none;color:#fff;width:38px;height:38px;border-radius:4px;cursor:pointer;font-size:1.1rem;font-weight:900;box-shadow:0 2px 8px rgba(228,0,43,.25)">+</button>
+        <button onclick="liveAddPitch(-1)" style="background:none;border:1px solid var(--border);color:var(--muted);width:38px;height:20px;border-radius:3px;cursor:pointer;font-size:.7rem;line-height:1">−</button>
       </div>
     </div>
-    ${pct>=85?`<div class="alert alert-danger" style="margin-top:8px;font-size:.75rem;padding:7px 10px">⚠ Approaching limit — ${remaining} pitches left</div>`:''}
-    ${pct>=100?`<div class="alert alert-danger" style="margin-top:6px;font-size:.75rem;padding:7px 10px;font-weight:900">🛑 Pitch limit reached — must remove pitcher</div>`:''}`;
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+      ${pct>=100?'<div class="alert alert-danger" style="padding:5px 10px;font-size:.72rem;font-weight:900;flex:1;margin-right:8px">🛑 Limit reached — change pitcher now</div>':
+        pct>=85?`<div class="alert alert-warn" style="padding:5px 10px;font-size:.72rem;flex:1;margin-right:8px">⚠ ${remaining} pitches left</div>`:'<div style="flex:1"></div>'}
+      <button class="live-swap-btn" onclick="livePitcherSwap()">Change Pitcher ↕</button>
+    </div>`;
 }
 
 function renderLiveLineup() {
-  const el = document.getElementById('live-lineup-list');
-  const lineup = gdLineup.map((p,i) => {
-    const isActive = i === gdLiveState.batterIdx;
-    const sub = gdLiveState.subs[p.id];
-    const display = sub ? S.players.find(x=>x.id===sub)||p : p;
-    return `<div class="live-batter-row ${isActive?'active':''}" id="lb-row-${i}">
-      <div style="font-size:.72rem;font-weight:900;color:${isActive?'var(--accent)':'var(--muted)'};width:16px;flex-shrink:0">${i+1}</div>
-      ${playerAvatar(display,30)}
+  const bench = _liveBench();
+  document.getElementById('live-lineup-list').innerHTML = gdLineup.map((slot, i) => {
+    const subId   = gdLiveState.subs[slot.id];
+    const display = subId ? (S.players.find(x=>x.id===subId)||slot) : slot;
+    const isCur   = i === gdLiveState.batterIdx;
+    return `<div class="live-player-row ${isCur?'is-batter':''}">
+      <div class="live-row-num ${isCur?'cur':''}">${i+1}</div>
+      ${playerAvatar(display, 30)}
       <div style="flex:1;min-width:0">
-        <div style="font-size:.82rem;font-weight:700">${gdShortName(display)}${sub?'<span style="font-size:.6rem;color:var(--gold);margin-left:4px">SUB</span>':''}</div>
+        <div style="font-size:.82rem;font-weight:${isCur?900:700}">${display.name}${subId?'<span style="font-size:.58rem;color:var(--gold);margin-left:4px">SUB</span>':''}</div>
         <div style="font-size:.62rem;color:var(--muted)">${(display.positions||[]).slice(0,2).join(' · ')||'—'}</div>
       </div>
-      ${isActive?`<div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end">
-        <button class="live-ab-btn hit"  onclick="liveAB(${i},'H')">H</button>
-        <button class="live-ab-btn hit"  onclick="liveAB(${i},'2B')">2B</button>
-        <button class="live-ab-btn hit"  onclick="liveAB(${i},'HR')">HR</button>
-        <button class="live-ab-btn walk" onclick="liveAB(${i},'BB')">BB</button>
-        <button class="live-ab-btn out"  onclick="liveAB(${i},'K')">K</button>
-        <button class="live-ab-btn out"  onclick="liveAB(${i},'OUT')">Out</button>
-        <button onclick="liveNextBatter()" style="background:var(--accent);border:none;color:#fff;padding:3px 10px;border-radius:3px;cursor:pointer;font-size:.65rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px">Next ▶</button>
-      </div>`:'<button onclick="gdLiveState.batterIdx='+i+';renderLiveLineup()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:.62rem">▶ Up</button>'}
+      <div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+        ${isCur?'<span style="font-size:.62rem;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:.5px">Batting</span>':'<button onclick="gdLiveState.batterIdx='+i+';renderLiveAB();renderLiveLineup()" class="live-change-btn">▶ Up</button>'}
+        ${bench.length?`<button class="live-change-btn" onclick="liveSubLineupSlot(${i})">Sub</button>`:''}
+        <button onclick="liveMoveInOrder(${i},-1)" ${i===0?'disabled':''} style="background:none;border:1px solid var(--border);color:var(--muted);padding:2px 5px;border-radius:3px;cursor:pointer;font-size:.65rem;line-height:1.6;opacity:${i===0?.3:1}">▲</button>
+        <button onclick="liveMoveInOrder(${i}, 1)" ${i===gdLineup.length-1?'disabled':''} style="background:none;border:1px solid var(--border);color:var(--muted);padding:2px 5px;border-radius:3px;cursor:pointer;font-size:.65rem;line-height:1.6;opacity:${i===gdLineup.length-1?.3:1}">▼</button>
+      </div>
     </div>`;
-  }).join('');
-  el.innerHTML = lineup || '<div class="empty"><p>No lineup set</p></div>';
+  }).join('') || '<div style="padding:16px;color:var(--muted);font-size:.82rem">No lineup set</div>';
 }
 
-function renderLiveBench() {
-  const card = document.getElementById('live-bench-card');
-  const inLineup = new Set(gdLineup.map(p => gdLiveState.subs[p.id] || p.id));
-  const bench = S.players.filter(p => gdPresent.has(p.id) && !inLineup.has(p.id));
-  if (!bench.length) { card.style.display='none'; return; }
-  card.style.display='block';
-  card.innerHTML = `<div class="card-title" style="margin-bottom:8px">Bench — tap to substitute</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-      ${bench.map(p=>`<div class="chip" onclick="liveSubModal('${p.id}')" style="cursor:pointer">
-        ${playerAvatar(p,22)}
-        <span>${gdShortName(p)}</span>
-      </div>`).join('')}
+function renderLiveField() {
+  const POS_ORDER = ['P','C','1B','2B','3B','SS','LF','CF','RF'];
+  document.getElementById('live-field-grid').innerHTML = POS_ORDER.map(pos => {
+    const pid = gdFieldAssign[pos];
+    const p   = pid ? S.players.find(x => x.id === pid) : null;
+    const isP = pos === 'P';
+    return `<div class="live-def-row">
+      <div class="live-pos-badge">${pos}</div>
+      ${p ? playerAvatar(p, 28) : `<div style="width:28px;height:28px;border-radius:50%;background:var(--surface2);border:1px dashed var(--border);flex-shrink:0"></div>`}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.82rem;font-weight:700;color:${p?'var(--text)':'var(--muted)'}">${p ? p.name : 'Unassigned'}</div>
+        ${p?`<div style="font-size:.62rem;color:var(--muted)">#${p.jersey||'?'}</div>`:''}
+      </div>
+      <button class="live-change-btn" onclick="${isP?'livePitcherSwap()':'liveFieldSubModal(\''+pos+'\')'}">${isP?'Change P ↕':'Change ↕'}</button>
     </div>`;
+  }).join('');
+}
+
+function showLiveTab(tab) {
+  _liveTab = tab;
+  document.getElementById('live-tab-lineup').style.display = tab==='lineup'?'block':'none';
+  document.getElementById('live-tab-field').style.display  = tab==='field' ?'block':'none';
+  const ln = document.getElementById('ltab-lineup');
+  const fd = document.getElementById('ltab-field');
+  if (ln) { ln.style.background=tab==='lineup'?'var(--surface)':'var(--surface2)'; ln.style.color=tab==='lineup'?'var(--text)':'var(--muted)'; ln.style.borderBottom=tab==='lineup'?'2px solid var(--accent)':'2px solid transparent'; }
+  if (fd) { fd.style.background=tab==='field' ?'var(--surface)':'var(--surface2)'; fd.style.color=tab==='field' ?'var(--text)':'var(--muted)'; fd.style.borderBottom=tab==='field' ?'2px solid var(--accent)':'2px solid transparent'; }
+}
+
+function _liveBench() {
+  const inLineup = new Set(gdLineup.map(slot => gdLiveState.subs[slot.id] || slot.id));
+  return S.players.filter(p => gdPresent.has(p.id) && !inLineup.has(p.id));
 }
 
 function liveScore(team, delta) {
-  if (team==='us')   gdLiveState.usScore   = Math.max(0, gdLiveState.usScore   + delta);
-  else               gdLiveState.themScore = Math.max(0, gdLiveState.themScore + delta);
+  if (team==='us') gdLiveState.usScore = Math.max(0, gdLiveState.usScore + delta);
+  else             gdLiveState.themScore = Math.max(0, gdLiveState.themScore + delta);
   renderLiveInning();
 }
 
 function liveOuts(clicked) {
-  // Cycle: tap filled out to set outs to that number, tap current last to go to 0
   const cur = gdLiveState.outs;
   gdLiveState.outs = (clicked + 1 === cur) ? 0 : clicked + 1;
   if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); }
@@ -3846,54 +3983,246 @@ function liveOuts(clicked) {
 }
 
 function liveNextHalf() {
-  if (gdLiveState.topBottom === 'top') {
-    gdLiveState.topBottom = 'bot';
-  } else {
-    gdLiveState.topBottom = 'top';
-    gdLiveState.inning    = Math.min(gdLiveState.inning + 1, 7);
-  }
+  if (gdLiveState.topBottom === 'top') { gdLiveState.topBottom = 'bot'; }
+  else { gdLiveState.topBottom = 'top'; gdLiveState.inning = Math.min(gdLiveState.inning + 1, 7); }
   gdLiveState.outs = 0;
 }
 
-function liveNextInning() {
-  liveNextHalf();
-  renderLiveInning();
-}
+function liveNextInning() { liveNextHalf(); renderLiveInning(); }
 
 function liveAddPitch(n) {
-  const pitcherId = gdFieldAssign['P'];
-  if (!pitcherId) return;
-  gdLiveState.pitchCounts[pitcherId] = Math.max(0, (gdLiveState.pitchCounts[pitcherId]||0) + n);
+  const pid = gdFieldAssign['P'];
+  if (!pid) return;
+  gdLiveState.pitchCounts[pid] = Math.max(0, (gdLiveState.pitchCounts[pid]||0) + n);
   renderLivePitcher();
 }
 
-function liveAB(idx, result) {
-  // Record result label on the row for display, then advance
-  liveNextBatter();
+function liveAB(label, cls) {
+  const idx    = gdLiveState.batterIdx;
+  const slot   = gdLineup[idx];
+  const clsMap = { hit:'b-green', walk:'b-yellow', out:'b-red', neutral:'b-gray' };
+  gdLiveState.lastResult[idx] = { label, cls: clsMap[cls]||'b-gray' };
+  (gdLiveState.log = gdLiveState.log||[]).push({
+    type:'ab', slotIdx:idx, playerId:slot?.id, result:label, cls,
+    inning:gdLiveState.inning, half:gdLiveState.topBottom, ts:Date.now()
+  });
+  gdLiveState.batterIdx = (idx + 1) % (gdLineup.length || 1);
+  renderLiveAB();
+  renderLiveLineup();
+}
+
+function liveLogField(result) {
+  (gdLiveState.log = gdLiveState.log||[]).push({
+    type:'field', result, inning:gdLiveState.inning, half:gdLiveState.topBottom, ts:Date.now()
+  });
+  // Flash confirmation on the button briefly
+  const btns = document.querySelectorAll('#live-ab-card .live-ab-btn.neutral');
+  btns.forEach(b => { if (b.textContent.trim()===result) { b.style.background='rgba(201,168,76,.3)'; setTimeout(()=>b.style.background='',600); } });
+}
+
+function liveUndo() {
+  const log = gdLiveState.log||[];
+  if (!log.length) return;
+  // Find and remove the last AB entry (skip past field events at the tail)
+  let i = log.length - 1;
+  while (i >= 0 && log[i].type !== 'ab') i--;
+  if (i < 0) { log.pop(); return; } // only field events — just pop last
+  const entry = log.splice(i, 1)[0];
+  // Go back to that batter
+  gdLiveState.batterIdx = entry.slotIdx;
+  // Clear last result for that slot only if no later AB for same slot exists in log
+  const hasLater = log.some(e => e.type==='ab' && e.slotIdx===entry.slotIdx);
+  if (!hasLater) delete gdLiveState.lastResult[entry.slotIdx];
+  else {
+    const last = [...log].reverse().find(e => e.type==='ab' && e.slotIdx===entry.slotIdx);
+    if (last) { const clsMap={hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'}; gdLiveState.lastResult[entry.slotIdx]={label:last.result,cls:clsMap[last.cls]||'b-gray'}; }
+  }
+  renderLiveAB();
+  renderLiveLineup();
+}
+
+function openPlayLog() {
+  const log = (gdLiveState.log||[]);
+  const ord = ['1st','2nd','3rd','4th','5th','6th','7th'];
+  const rows = [...log].reverse().map((entry, ri) => {
+    const realIdx = log.length - 1 - ri;
+    const inningLabel = (ord[entry.inning-1]||entry.inning+'th') + (entry.half==='top'?' ▲':' ▼');
+    let desc;
+    if (entry.type === 'ab') {
+      const slot = gdLineup[entry.slotIdx];
+      const subId = slot && gdLiveState.subs[slot.id];
+      const p = subId ? S.players.find(x=>x.id===subId)||slot : slot;
+      const clsMap = {hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'};
+      desc = `<span style="font-weight:700">${p?.name||'?'}</span> <span class="badge ${clsMap[entry.cls]||'b-gray'}" style="margin-left:4px">${entry.result}</span>`;
+    } else {
+      desc = `<span style="color:var(--gold)">⚡ ${entry.result}</span>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <div style="font-size:.65rem;color:var(--muted);flex-shrink:0;min-width:38px">${inningLabel}</div>
+      <div style="flex:1;font-size:.8rem">${desc}</div>
+      <button onclick="liveDeleteLogEntry(${realIdx})" title="Remove this play" style="background:none;border:1px solid rgba(228,0,43,.3);color:var(--danger);padding:2px 7px;border-radius:3px;cursor:pointer;font-size:.65rem;font-weight:800;flex-shrink:0">✕</button>
+      ${entry.type==='ab'?`<button onclick="liveEditLogEntry(${realIdx})" title="Change result" style="background:none;border:1px solid var(--border);color:var(--muted);padding:2px 7px;border-radius:3px;cursor:pointer;font-size:.65rem;font-weight:800;flex-shrink:0">✎</button>`:''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('confirm-modal-msg').innerHTML = `
+    <div style="font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;color:var(--muted)">Play Log — ${log.length} event${log.length===1?'':'s'}</div>
+    ${rows||'<div style="color:var(--muted);font-size:.82rem;padding:12px 0">No plays recorded yet</div>'}`;
+  document.getElementById('confirm-modal-ok').style.display = 'none';
+  openModal('confirm-modal');
+}
+
+function liveDeleteLogEntry(idx) {
+  const log = gdLiveState.log||[];
+  const entry = log[idx];
+  if (!entry) return;
+  log.splice(idx, 1);
+  if (entry.type === 'ab') {
+    const hasAny = log.some(e => e.type==='ab' && e.slotIdx===entry.slotIdx);
+    if (!hasAny) delete gdLiveState.lastResult[entry.slotIdx];
+  }
+  closeModal('confirm-modal');
+  document.getElementById('confirm-modal-ok').style.display = '';
+  renderLiveAB();
+  renderLiveLineup();
+}
+
+function liveEditLogEntry(idx) {
+  const log = gdLiveState.log||[];
+  const entry = log[idx];
+  if (!entry || entry.type!=='ab') return;
+  const ALL = [
+    {label:'1B',cls:'hit'},{label:'2B',cls:'hit'},{label:'3B',cls:'hit'},{label:'HR',cls:'hit'},
+    {label:'BB',cls:'walk'},{label:'HBP',cls:'walk'},{label:'ROE',cls:'walk'},{label:'FC',cls:'neutral'},
+    {label:'K',cls:'out'},{label:'K-L',cls:'out'},{label:'FO',cls:'out'},{label:'GO',cls:'out'},
+    {label:'LO',cls:'out'},{label:'DP',cls:'out'},{label:'Sac',cls:'out'},{label:'SF',cls:'neutral'},
+    {label:'E',cls:'out'},{label:'CI',cls:'neutral'},
+  ];
+  const opts = ALL.map(o=>`<option value="${o.label}|${o.cls}" ${o.label===entry.result?'selected':''}>${o.label}</option>`).join('');
+  const slot = gdLineup[entry.slotIdx];
+  const subId = slot && gdLiveState.subs[slot.id];
+  const p = subId ? S.players.find(x=>x.id===subId)||slot : slot;
+  document.getElementById('confirm-modal-msg').innerHTML = `
+    <div style="font-size:.82rem;font-weight:700;margin-bottom:12px">Edit result for <b>${p?.name||'?'}</b></div>
+    <select id="edit-result-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:8px;border-radius:3px;font-size:.88rem">${opts}</select>`;
+  document.getElementById('confirm-modal-ok').style.display = '';
+  document.getElementById('confirm-modal-ok').onclick = () => {
+    const [newLabel, newCls] = document.getElementById('edit-result-sel').value.split('|');
+    log[idx].result = newLabel; log[idx].cls = newCls;
+    const clsMap = {hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'};
+    // Update lastResult if this is the most recent AB for this slot
+    const laterAB = log.slice(idx+1).some(e=>e.type==='ab'&&e.slotIdx===entry.slotIdx);
+    if (!laterAB) gdLiveState.lastResult[entry.slotIdx] = {label:newLabel, cls:clsMap[newCls]||'b-gray'};
+    closeModal('confirm-modal');
+    renderLiveAB(); renderLiveLineup();
+  };
+  openModal('confirm-modal');
 }
 
 function liveNextBatter() {
   gdLiveState.batterIdx = (gdLiveState.batterIdx + 1) % (gdLineup.length || 1);
+  renderLiveAB();
   renderLiveLineup();
 }
 
-function liveSubModal(benchPlayerId) {
-  const benchPlayer = S.players.find(p => p.id === benchPlayerId);
-  if (!benchPlayer) return;
-  const lineupNames = gdLineup.map((p,i) => {
-    const cur = gdLiveState.subs[p.id] ? S.players.find(x=>x.id===gdLiveState.subs[p.id]) : p;
-    return `<option value="${p.id}">${i+1}. ${gdShortName(cur||p)}</option>`;
-  }).join('');
-  const sel = `<select id="sub-target-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:8px;border-radius:3px;font-size:.88rem;margin-bottom:12px">${lineupNames}</select>`;
-  document.getElementById('confirm-modal-msg').innerHTML =
-    `Sub <b>${gdShortName(benchPlayer)}</b> in for:<br><br>${sel}`;
+function livePrevBatter() {
+  const n = gdLineup.length || 1;
+  gdLiveState.batterIdx = (gdLiveState.batterIdx - 1 + n) % n;
+  renderLiveAB();
+  renderLiveLineup();
+}
+
+function liveSkipBatter() { liveNextBatter(); }
+
+function liveMoveInOrder(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= gdLineup.length) return;
+  [gdLineup[i], gdLineup[j]] = [gdLineup[j], gdLineup[i]];
+  // Keep current batter pointer accurate
+  if (gdLiveState.batterIdx === i) gdLiveState.batterIdx = j;
+  else if (gdLiveState.batterIdx === j) gdLiveState.batterIdx = i;
+  renderLiveLineup();
+  renderLiveAB();
+}
+
+// Sub a bench player into a specific lineup slot
+function liveSubLineupSlot(slotIdx) {
+  const bench = _liveBench();
+  if (!bench.length) return;
+  const opts = bench.map(p=>`<option value="${p.id}">${p.name} (#${p.jersey||'?'})</option>`).join('');
+  const sel = `<select id="sub-target-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:8px;border-radius:3px;font-size:.88rem">${opts}</select>`;
+  const slot = gdLineup[slotIdx];
+  const curSubId = gdLiveState.subs[slot.id];
+  const curName  = curSubId ? (S.players.find(x=>x.id===curSubId)||slot).name : slot.name;
+  document.getElementById('confirm-modal-msg').innerHTML = `Sub into spot <b>${slotIdx+1} — ${curName}</b>:<br><br>${sel}`;
   document.getElementById('confirm-modal-ok').onclick = () => {
-    const targetId = document.getElementById('sub-target-sel').value;
-    gdLiveState.subs[targetId] = benchPlayerId;
+    gdLiveState.subs[slot.id] = document.getElementById('sub-target-sel').value;
     closeModal('confirm-modal');
-    renderLiveMode();
+    renderLiveLineup(); renderLiveAB();
   };
   openModal('confirm-modal');
+}
+
+// Sub a bench player into the at-bat slot specifically (button on the batter card)
+function liveSubBatterModal(slotIdx) { liveSubLineupSlot(slotIdx); }
+
+// Sub any field position from the Defense tab
+function liveFieldSubModal(pos) {
+  const present = S.players.filter(p => gdPresent.has(p.id));
+  const cur     = gdFieldAssign[pos];
+  const opts    = present.map(p=>`<option value="${p.id}" ${p.id===cur?'selected':''}>${p.name} (#${p.jersey||'?'}) · ${(p.positions||[]).slice(0,2).join('/')}</option>`).join('');
+  const sel     = `<select id="sub-target-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:8px;border-radius:3px;font-size:.88rem">${opts}</select>`;
+  document.getElementById('confirm-modal-msg').innerHTML = `Assign <b>${pos}</b>:<br><br>${sel}`;
+  document.getElementById('confirm-modal-ok').onclick = () => {
+    const pid = document.getElementById('sub-target-sel').value;
+    // Remove this player from any other position first
+    Object.keys(gdFieldAssign).forEach(p => { if (gdFieldAssign[p] === pid) delete gdFieldAssign[p]; });
+    gdFieldAssign[pos] = pid;
+    closeModal('confirm-modal');
+    renderLiveField(); renderLivePitcher();
+  };
+  openModal('confirm-modal');
+}
+
+// Pitcher swap — shows only eligible pitchers (available, not current)
+function livePitcherSwap() {
+  const currentPid = gdFieldAssign['P'];
+  const gd = (() => { const g = S.games.find(x=>x.id===document.getElementById('gd-game-select').value); return g?g.date:today(); })();
+  const present = S.players.filter(p => gdPresent.has(p.id) && p.positions && p.positions.includes('P'));
+  const eligible = present.filter(p => {
+    if (p.id === currentPid) return false;
+    const st = pitchStatus(p, gd);
+    return st.ok;
+  });
+  const all = present.filter(p => p.id !== currentPid);
+  const list = (eligible.length ? eligible : all).map(p => {
+    const thrown = gdLiveState.pitchCounts[p.id] || 0;
+    const R = rules();
+    const st = pitchStatus(p, gd);
+    const avail = st.ok ? `${Math.max(0,(st.remaining||R.pitchLimit)-thrown)} pitches left` : st.reason;
+    return `<div onclick="livePitcherSwapTo('${p.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+      ${playerAvatar(p,32)}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.88rem;font-weight:800">#${p.jersey} ${p.name}</div>
+        <div style="font-size:.7rem;color:${st.ok?'var(--muted)':'var(--danger)'}">${avail}</div>
+      </div>
+      <span style="font-size:.7rem;font-weight:700;color:var(--accent)">Select →</span>
+    </div>`;
+  }).join('');
+  document.getElementById('confirm-modal-msg').innerHTML =
+    `<div style="font-size:.72rem;color:var(--muted);margin-bottom:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px">Choose New Pitcher</div>` +
+    (list || '<div style="padding:10px 0;color:var(--muted);font-size:.82rem">No other pitchers available</div>');
+  document.getElementById('confirm-modal-ok').style.display = 'none';
+  openModal('confirm-modal');
+}
+
+function livePitcherSwapTo(pid) {
+  // Remove new pitcher from any current field position
+  Object.keys(gdFieldAssign).forEach(pos => { if (gdFieldAssign[pos] === pid) delete gdFieldAssign[pos]; });
+  gdFieldAssign['P'] = pid;
+  closeModal('confirm-modal');
+  document.getElementById('confirm-modal-ok').style.display = '';
+  renderLivePitcher(); renderLiveField();
 }
 
 // ============================================================
