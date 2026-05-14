@@ -264,6 +264,18 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .live-pos-badge{width:30px;font-size:.65rem;font-weight:900;color:var(--muted);text-align:right;flex-shrink:0;text-transform:uppercase;letter-spacing:.5px}
 .live-change-btn{padding:4px 9px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.62rem;font-weight:800;cursor:pointer;white-space:nowrap;text-transform:uppercase;letter-spacing:.3px;transition:all .15s;flex-shrink:0}
 .live-change-btn:hover{border-color:var(--text);color:var(--text)}
+/* Base diamond */
+.live-bases-svg{display:block;margin:1px auto;overflow:visible}
+.live-base-poly{cursor:pointer;transition:fill .15s,stroke .15s}
+.live-base-poly:hover{stroke:var(--gold)!important}
+/* Runner action modal */
+.runner-section-lbl{font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:5px;margin-top:10px}
+.runner-section-lbl:first-child{margin-top:0}
+.runner-btn-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px}
+.runner-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:4px;cursor:pointer;font-size:.72rem;font-weight:700;transition:background .15s}
+.runner-btn:active{background:var(--surface)}
+.runner-btn.danger{color:var(--danger);border-color:rgba(228,0,43,.4);background:rgba(228,0,43,.07)}
+.runner-btn.danger:active{background:rgba(228,0,43,.2)}
 /* PRINT */
 @media print{
   body>*:not(#report-overlay){display:none!important}
@@ -471,7 +483,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
     <div class="modal-body" style="padding:10px 14px">
       <p style="font-size:.7rem;color:var(--muted);margin-bottom:10px;text-align:center">Tap the field to mark the hit location</p>
       <div style="position:relative;user-select:none;touch-action:none">
-        <svg id="hit-loc-svg" viewBox="0 0 300 260" style="width:100%;cursor:crosshair;display:block;border-radius:6px;overflow:hidden" onclick="liveMarkHitLocation(event)">
+        <svg id="hit-loc-svg" viewBox="0 0 300 260" style="width:100%;cursor:crosshair;display:block;border-radius:6px;overflow:hidden" onclick="liveMarkHitLocation(event)" ontouchend="liveMarkHitLocation(event)">
           <!-- Sky/warning track -->
           <rect width="300" height="260" fill="#0a150a"/>
           <!-- Outfield grass -->
@@ -677,7 +689,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
 <div class="overlay" id="confirm-modal">
   <div class="modal" style="max-width:360px">
     <div class="modal-hdr"><h2 id="conf-title">Confirm</h2><button class="x-btn" onclick="closeModal('confirm-modal')">✕</button></div>
-    <div class="modal-body"><p id="conf-msg" style="font-size:.9rem;line-height:1.5"></p></div>
+    <div class="modal-body"><div id="conf-msg" style="font-size:.9rem;line-height:1.5"></div></div>
     <div class="modal-ftr">
       <button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button>
       <button class="btn btn-danger" id="conf-ok">Confirm</button>
@@ -860,6 +872,20 @@ main{padding:16px;max-width:860px;margin:0 auto}
               <div class="live-out-dot" id="live-out1" onclick="liveOuts(1)" title="Out 2"></div>
               <div class="live-out-dot" id="live-out2" onclick="liveOuts(2)" title="Out 3"></div>
             </div>
+            <!-- Base diamond -->
+            <svg class="live-bases-svg" viewBox="0 0 80 68" width="76" height="64">
+              <line x1="40" y1="62" x2="68" y2="36" stroke="var(--border)" stroke-width="1.2"/>
+              <line x1="68" y1="36" x2="40" y2="10" stroke="var(--border)" stroke-width="1.2"/>
+              <line x1="40" y1="10" x2="12" y2="36" stroke="var(--border)" stroke-width="1.2"/>
+              <line x1="12" y1="36" x2="40" y2="62" stroke="var(--border)" stroke-width="1.2"/>
+              <polygon points="34,60 46,60 43,66 40,68 37,66" fill="var(--surface2)" stroke="var(--border)" stroke-width="1.5"/>
+              <polygon id="lb-3B" class="live-base-poly" points="12,27 21,36 12,45 3,36" fill="var(--surface2)" stroke="var(--border)" stroke-width="2" onclick="liveRunnerAction('3B')"/>
+              <polygon id="lb-2B" class="live-base-poly" points="40,1 49,10 40,19 31,10" fill="var(--surface2)" stroke="var(--border)" stroke-width="2" onclick="liveRunnerAction('2B')"/>
+              <polygon id="lb-1B" class="live-base-poly" points="68,27 77,36 68,45 59,36" fill="var(--surface2)" stroke="var(--border)" stroke-width="2" onclick="liveRunnerAction('1B')"/>
+              <text id="lb-1B-txt" x="68" y="40" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
+              <text id="lb-2B-txt" x="40" y="14" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
+              <text id="lb-3B-txt" x="12" y="40" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
+            </svg>
             <div style="display:flex;gap:4px">
               <button class="live-half-btn" onclick="liveUndo()" id="live-undo-half-btn" style="opacity:.5" title="Undo last action">↩</button>
               <button class="live-half-btn" onclick="liveNextInning()">End Half ▶</button>
@@ -3847,7 +3873,7 @@ function gdStartLive() {
   document.getElementById('live-them-lbl').textContent = g ? (g.opponent||'THEM').toUpperCase().slice(0,8) : 'THEM';
   gdLiveState = { usScore:0, themScore:0, inning:1, topBottom:'top', outs:0,
                   batterIdx:0, pitchCounts:{}, subs:{}, fieldSubs:{}, lastResult:{}, log:[],
-                  pulledPitchers:[] };
+                  pulledPitchers:[], bases:{'1B':null,'2B':null,'3B':null}, stats:{} };
   _liveTab = 'lineup';
   renderLiveMode();
   gdGoStep(5);
@@ -3855,6 +3881,7 @@ function gdStartLive() {
 
 function renderLiveMode() {
   renderLiveInning();
+  renderLiveBases();
   renderLiveAB();
   renderLivePitcher();
   renderLiveLineup();
@@ -3870,6 +3897,21 @@ function renderLiveInning() {
   [0,1,2].forEach(i => document.getElementById('live-out'+i).classList.toggle('on', i < gdLiveState.outs));
   const undoBtn = document.getElementById('live-undo-half-btn');
   if (undoBtn) undoBtn.style.opacity = (gdLiveState.log||[]).length ? '1' : '.3';
+}
+
+function renderLiveBases() {
+  const bases = gdLiveState.bases || {'1B':null,'2B':null,'3B':null};
+  ['1B','2B','3B'].forEach(base => {
+    const pid  = bases[base];
+    const p    = pid ? S.players.find(x => x.id === pid) : null;
+    const poly = document.getElementById('lb-' + base);
+    const txt  = document.getElementById('lb-' + base + '-txt');
+    if (poly) {
+      poly.style.fill   = pid ? 'var(--accent)' : 'var(--surface2)';
+      poly.style.stroke = pid ? 'var(--accent)' : 'var(--border)';
+    }
+    if (txt) txt.textContent = p ? ('#' + (p.jersey || '?')) : '';
+  });
 }
 
 let _liveShowMore = false;
@@ -4043,10 +4085,11 @@ function liveOuts(clicked) {
 }
 
 function liveNextHalf() {
-  // Log so undo can reverse it
   (gdLiveState.log = gdLiveState.log||[]).push({
-    type:'half_end', prevInning:gdLiveState.inning, prevHalf:gdLiveState.topBottom, prevOuts:gdLiveState.outs
+    type:'half_end', prevInning:gdLiveState.inning, prevHalf:gdLiveState.topBottom,
+    prevOuts:gdLiveState.outs, prevBases:{...(gdLiveState.bases||{})}
   });
+  gdLiveState.bases = {'1B':null,'2B':null,'3B':null};
   if (gdLiveState.topBottom === 'top') { gdLiveState.topBottom = 'bot'; }
   else { gdLiveState.topBottom = 'top'; gdLiveState.inning = Math.min(gdLiveState.inning + 1, 7); }
   gdLiveState.outs = 0;
@@ -4063,20 +4106,67 @@ function liveAddPitch(n) {
 
 const BALL_IN_PLAY = new Set(['1B','2B','3B','HR','GO','FO','LO','DP','FC','ROE','E','Sac','SF','CI']);
 
+function _liveStat(pid, key, n) {
+  if (!pid) return;
+  if (!gdLiveState.stats) gdLiveState.stats = {};
+  if (!gdLiveState.stats[pid]) gdLiveState.stats[pid] = {};
+  gdLiveState.stats[pid][key] = (gdLiveState.stats[pid][key] || 0) + (n || 1);
+}
+
 function liveAB(label, cls) {
   const idx    = gdLiveState.batterIdx;
   const slot   = gdLineup[idx];
+  const subId  = slot && gdLiveState.subs[slot.id];
+  const batterId = subId || slot?.id;
   const clsMap = { hit:'b-green', walk:'b-yellow', out:'b-red', neutral:'b-gray' };
   gdLiveState.lastResult[idx] = { label, cls: clsMap[cls]||'b-gray' };
+  const bases = gdLiveState.bases = gdLiveState.bases || {'1B':null,'2B':null,'3B':null};
   const entry = {
     type:'ab', slotIdx:idx, playerId:slot?.id, result:label, cls,
-    inning:gdLiveState.inning, half:gdLiveState.topBottom, ts:Date.now()
+    inning:gdLiveState.inning, half:gdLiveState.topBottom, ts:Date.now(),
+    prevBases:{...bases}, prevScore:gdLiveState.usScore
   };
   (gdLiveState.log = gdLiveState.log||[]).push(entry);
+
+  // Auto-place batter and handle scoring
+  if (label === 'HR') {
+    const runners = ['3B','2B','1B'].filter(b => bases[b]);
+    runners.forEach(b => { _liveStat(bases[b], 'r'); bases[b] = null; });
+    _liveStat(batterId, 'r'); _liveStat(batterId, 'hr');
+    _liveStat(batterId, 'rbi', runners.length + 1);
+    gdLiveState.usScore += runners.length + 1;
+  } else if (label === '1B' || label === 'ROE') {
+    bases['1B'] = batterId;
+  } else if (label === '2B') {
+    bases['2B'] = batterId;
+  } else if (label === '3B') {
+    bases['3B'] = batterId;
+  } else if (label === 'BB' || label === 'HBP' || label === 'IBB' || label === 'CI') {
+    // Forced advances
+    if (bases['1B'] && bases['2B'] && bases['3B']) {
+      _liveStat(bases['3B'], 'r');
+      _liveStat(batterId, 'rbi');
+      gdLiveState.usScore++;
+      bases['3B'] = bases['2B']; bases['2B'] = bases['1B']; bases['1B'] = batterId;
+    } else if (bases['1B'] && bases['2B']) {
+      bases['3B'] = bases['2B']; bases['2B'] = bases['1B']; bases['1B'] = batterId;
+    } else if (bases['1B']) {
+      bases['2B'] = bases['1B']; bases['1B'] = batterId;
+    } else {
+      bases['1B'] = batterId;
+    }
+  } else if (label === 'FC') {
+    bases['1B'] = batterId; // runner put out — coach removes via diamond
+  } else if (label === 'SF') {
+    if (bases['3B']) { _liveStat(bases['3B'], 'r'); _liveStat(batterId, 'rbi'); gdLiveState.usScore++; bases['3B'] = null; }
+  }
+  // Outs (K, FO, GO, LO, DP, Sac, E): batter doesn't reach — no base change
+
   gdLiveState.batterIdx = (idx + 1) % (gdLineup.length || 1);
   renderLiveAB();
   renderLiveLineup();
-  // Prompt hit location for balls in play
+  renderLiveBases();
+  renderLiveInning();
   if (BALL_IN_PLAY.has(label)) promptHitLocation(entry, label);
 }
 
@@ -4097,11 +4187,13 @@ function promptHitLocation(entry, label) {
 }
 
 function liveMarkHitLocation(e) {
+  if (e.cancelable) e.preventDefault();
+  const src  = e.changedTouches ? e.changedTouches[0] : e;
   const svg  = document.getElementById('hit-loc-svg');
   const rect = svg.getBoundingClientRect();
   const vb   = svg.viewBox.baseVal;
-  const x    = ((e.clientX - rect.left) / rect.width)  * vb.width;
-  const y    = ((e.clientY - rect.top)  / rect.height) * vb.height;
+  const x    = ((src.clientX - rect.left) / rect.width)  * vb.width;
+  const y    = ((src.clientY - rect.top)  / rect.height) * vb.height;
   _hitLocX = +(x / vb.width).toFixed(3);
   _hitLocY = +(y / vb.height).toFixed(3);
   document.getElementById('hit-loc-dot').setAttribute('cx', x);
@@ -4161,13 +4253,16 @@ function liveUndo() {
   const entry = log.pop(); // always undo the last event regardless of type
 
   if (entry.type === 'half_end') {
-    // Reverse the inning advance — put outs back at where they were (2 before 3rd out)
-    gdLiveState.inning     = entry.prevInning;
-    gdLiveState.topBottom  = entry.prevHalf;
-    gdLiveState.outs       = Math.max(0, entry.prevOuts); // restore prior out count
+    gdLiveState.inning    = entry.prevInning;
+    gdLiveState.topBottom = entry.prevHalf;
+    gdLiveState.outs      = Math.max(0, entry.prevOuts);
+    gdLiveState.bases     = entry.prevBases || {'1B':null,'2B':null,'3B':null};
     renderLiveInning();
+    renderLiveBases();
   } else if (entry.type === 'ab') {
     gdLiveState.batterIdx = entry.slotIdx;
+    gdLiveState.bases     = entry.prevBases || {'1B':null,'2B':null,'3B':null};
+    if (entry.prevScore !== undefined) gdLiveState.usScore = entry.prevScore;
     const hasLater = log.some(e => e.type==='ab' && e.slotIdx===entry.slotIdx);
     if (!hasLater) {
       delete gdLiveState.lastResult[entry.slotIdx];
@@ -4177,9 +4272,124 @@ function liveUndo() {
     }
     renderLiveAB();
     renderLiveLineup();
+    renderLiveBases();
+    renderLiveInning();
+  } else if (entry.type === 'base') {
+    gdLiveState.bases = entry.prevBases || {'1B':null,'2B':null,'3B':null};
+    if (entry.prevScore !== undefined) gdLiveState.usScore = entry.prevScore;
+    if (entry.prevOuts  !== undefined) gdLiveState.outs    = entry.prevOuts;
+    renderLiveInning();
+    renderLiveBases();
   }
-  // field events: just removed from log, re-render AB to update undo button state
   else { renderLiveAB(); }
+}
+
+function _liveBaseLog(extraFields) {
+  const entry = { type:'base', prevBases:{...(gdLiveState.bases||{})},
+                  prevScore:gdLiveState.usScore, prevOuts:gdLiveState.outs, ...extraFields };
+  (gdLiveState.log = gdLiveState.log||[]).push(entry);
+}
+
+function liveRunnerAction(base) {
+  const bases = gdLiveState.bases = gdLiveState.bases || {'1B':null,'2B':null,'3B':null};
+  const pid   = bases[base];
+  const p     = pid ? S.players.find(x => x.id === pid) : null;
+
+  if (!pid) {
+    // Empty base — offer to manually place a runner
+    const candidates = gdLineup.map(slot => {
+      const subId = gdLiveState.subs[slot.id];
+      return subId ? (S.players.find(x=>x.id===subId)||slot) : slot;
+    });
+    const opts = candidates.map(pl =>
+      `<option value="${pl.id}">${pl.name} (#${pl.jersey||'?'})</option>`).join('');
+    _openLiveModal(
+      `Place Runner on ${base}`,
+      `<div style="margin-bottom:8px;font-size:.82rem">Who is on ${base}?</div>
+       <select id="runner-place-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:10px;border-radius:3px;font-size:.9rem">${opts}</select>`,
+      () => {
+        _liveBaseLog();
+        bases[base] = document.getElementById('runner-place-sel').value;
+        closeModal('confirm-modal');
+        renderLiveBases();
+      }
+    );
+    document.getElementById('conf-ok').textContent = 'Place Runner';
+    return;
+  }
+
+  // Runner is on this base — show advance / out options
+  const toBase    = base==='1B' ? '2B' : base==='2B' ? '3B' : null;
+  const toLabel   = toBase || 'Home';
+  const advHeader = toBase ? `Advance to ${toLabel}` : 'Score (Home)';
+
+  const advRow = `
+    <div class="runner-section-lbl">${advHeader}</div>
+    <div class="runner-btn-row">
+      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','SB')">Stolen Base</button>
+      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','WP')">Wild Pitch</button>
+      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','PB')">Passed Ball</button>
+      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','Balk')">Balk</button>
+      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','E')">Error</button>
+      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','Adv')">Advance</button>
+    </div>`;
+
+  const outRow = `
+    <div class="runner-section-lbl" style="color:var(--danger)">Out</div>
+    <div class="runner-btn-row">
+      <button class="runner-btn danger" onclick="liveRunnerOut('${base}','CS')">Caught Stealing</button>
+      <button class="runner-btn danger" onclick="liveRunnerOut('${base}','PIK')">Picked Off</button>
+      <button class="runner-btn danger" onclick="liveRunnerOut('${base}','Tag')">Tagged Out</button>
+      <button class="runner-btn danger" onclick="liveRunnerOut('${base}','Out')">Out</button>
+    </div>`;
+
+  document.getElementById('conf-title').textContent = `#${p.jersey||'?'} ${p.name} on ${base}`;
+  document.getElementById('conf-msg').innerHTML = advRow + outRow;
+  document.getElementById('conf-ok').style.display = 'none';
+  openModal('confirm-modal');
+}
+
+function liveRunnerAdvance(fromBase, reason) {
+  const bases = gdLiveState.bases;
+  const pid   = bases[fromBase];
+  if (!pid) return;
+  const toBase = fromBase==='1B' ? '2B' : fromBase==='2B' ? '3B' : null;
+  if (!toBase) { liveRunnerScore(fromBase, reason); return; }
+  _liveBaseLog();
+  bases[toBase]   = pid;
+  bases[fromBase] = null;
+  if (reason === 'SB') _liveStat(pid, 'sb');
+  closeModal('confirm-modal');
+  renderLiveBases();
+}
+
+function liveRunnerScore(fromBase, reason) {
+  const bases = gdLiveState.bases;
+  const pid   = bases[fromBase];
+  if (!pid) return;
+  _liveBaseLog();
+  bases[fromBase] = null;
+  gdLiveState.usScore++;
+  _liveStat(pid, 'r');
+  if (reason === 'SB') _liveStat(pid, 'sb');
+  closeModal('confirm-modal');
+  renderLiveInning();
+  renderLiveBases();
+}
+
+function liveRunnerOut(fromBase, reason) {
+  const bases = gdLiveState.bases;
+  const pid   = bases[fromBase];
+  if (!pid) return;
+  _liveBaseLog();
+  bases[fromBase] = null;
+  gdLiveState.outs = Math.min(3, gdLiveState.outs + 1);
+  if (reason === 'CS')  _liveStat(pid, 'cs');
+  if (reason === 'PIK') _liveStat(pid, 'pik');
+  closeModal('confirm-modal');
+  if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); }
+  renderLiveInning();
+  renderLiveBases();
 }
 
 function openPlayLog() {
@@ -4189,26 +4399,28 @@ function openPlayLog() {
     const realIdx = log.length - 1 - ri;
     const inningLabel = (ord[entry.inning-1]||entry.inning+'th') + (entry.half==='top'?' ▲':' ▼');
     let desc;
-    if (entry.type === 'ab') {
+    if (entry.type === 'half_end') {
+      desc = `<span style="color:var(--muted)">— End of ${inningLabel}</span>`;
+    } else if (entry.type === 'ab') {
       const slot = gdLineup[entry.slotIdx];
       const subId = slot && gdLiveState.subs[slot.id];
       const p = subId ? S.players.find(x=>x.id===subId)||slot : slot;
       const clsMap = {hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'};
-      desc = `<span style="font-weight:700">${p?.name||'?'}</span> <span class="badge ${clsMap[entry.cls]||'b-gray'}" style="margin-left:4px">${entry.result}</span>`;
+      const zone = entry.hitZone ? `<span style="font-size:.62rem;color:var(--muted);margin-left:4px">${entry.hitZone}</span>` : '';
+      desc = `<span style="font-weight:700">${p?.name||'?'}</span> <span class="badge ${clsMap[entry.cls]||'b-gray'}" style="margin-left:4px">${entry.result}</span>${zone}`;
     } else {
       desc = `<span style="color:var(--gold)">⚡ ${entry.result}</span>`;
     }
     return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)">
-      <div style="font-size:.65rem;color:var(--muted);flex-shrink:0;min-width:38px">${inningLabel}</div>
+      <div style="font-size:.62rem;color:var(--muted);flex-shrink:0;min-width:36px">${ord[entry.inning-1]||entry.inning+'th'} ${entry.half==='top'?'▲':'▼'}</div>
       <div style="flex:1;font-size:.8rem">${desc}</div>
-      <button onclick="liveDeleteLogEntry(${realIdx})" title="Remove this play" style="background:none;border:1px solid rgba(228,0,43,.3);color:var(--danger);padding:2px 7px;border-radius:3px;cursor:pointer;font-size:.65rem;font-weight:800;flex-shrink:0">✕</button>
-      ${entry.type==='ab'?`<button onclick="liveEditLogEntry(${realIdx})" title="Change result" style="background:none;border:1px solid var(--border);color:var(--muted);padding:2px 7px;border-radius:3px;cursor:pointer;font-size:.65rem;font-weight:800;flex-shrink:0">✎</button>`:''}
+      ${entry.type==='ab'?`<button onclick="liveEditLogEntry(${realIdx})" style="background:none;border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:.65rem;font-weight:800;flex-shrink:0">✎</button>`:''}
+      <button onclick="liveDeleteLogEntry(${realIdx})" style="background:none;border:1px solid rgba(228,0,43,.3);color:var(--danger);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:.65rem;font-weight:800;flex-shrink:0">✕</button>
     </div>`;
   }).join('');
-
-  document.getElementById('conf-msg').innerHTML = `
-    <div style="font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;color:var(--muted)">Play Log — ${log.length} event${log.length===1?'':'s'}</div>
-    ${rows||'<div style="color:var(--muted);font-size:.82rem;padding:12px 0">No plays recorded yet</div>'}`;
+  document.getElementById('conf-title').textContent = 'Play Log';
+  document.getElementById('conf-msg').innerHTML =
+    `<div style="max-height:55vh;overflow-y:auto">${rows||'<div style="color:var(--muted);font-size:.82rem;padding:12px 0">No plays recorded yet</div>'}</div>`;
   document.getElementById('conf-ok').style.display = 'none';
   openModal('confirm-modal');
 }
@@ -4224,8 +4436,7 @@ function liveDeleteLogEntry(idx) {
   }
   closeModal('confirm-modal');
   document.getElementById('conf-ok').style.display = '';
-  renderLiveAB();
-  renderLiveLineup();
+  renderLiveAB(); renderLiveLineup();
 }
 
 function liveEditLogEntry(idx) {
@@ -4239,25 +4450,23 @@ function liveEditLogEntry(idx) {
     {label:'LO',cls:'out'},{label:'DP',cls:'out'},{label:'Sac',cls:'out'},{label:'SF',cls:'neutral'},
     {label:'E',cls:'out'},{label:'CI',cls:'neutral'},
   ];
-  const opts = ALL.map(o=>`<option value="${o.label}|${o.cls}" ${o.label===entry.result?'selected':''}>${o.label}</option>`).join('');
   const slot = gdLineup[entry.slotIdx];
   const subId = slot && gdLiveState.subs[slot.id];
   const p = subId ? S.players.find(x=>x.id===subId)||slot : slot;
-  document.getElementById('conf-msg').innerHTML = `
-    <div style="font-size:.82rem;font-weight:700;margin-bottom:12px">Edit result for <b>${p?.name||'?'}</b></div>
-    <select id="edit-result-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:8px;border-radius:3px;font-size:.88rem">${opts}</select>`;
-  document.getElementById('conf-ok').style.display = '';
-  document.getElementById('conf-ok').onclick = () => {
-    const [newLabel, newCls] = document.getElementById('edit-result-sel').value.split('|');
-    log[idx].result = newLabel; log[idx].cls = newCls;
-    const clsMap = {hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'};
-    // Update lastResult if this is the most recent AB for this slot
-    const laterAB = log.slice(idx+1).some(e=>e.type==='ab'&&e.slotIdx===entry.slotIdx);
-    if (!laterAB) gdLiveState.lastResult[entry.slotIdx] = {label:newLabel, cls:clsMap[newCls]||'b-gray'};
-    closeModal('confirm-modal');
-    renderLiveAB(); renderLiveLineup();
-  };
-  openModal('confirm-modal');
+  const opts = ALL.map(o=>`<option value="${o.label}|${o.cls}" ${o.label===entry.result?'selected':''}>${o.label}</option>`).join('');
+  _openLiveModal(
+    `Edit — ${p?.name||'?'}`,
+    `<select id="edit-result-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:10px;border-radius:3px;font-size:.9rem">${opts}</select>`,
+    () => {
+      const [newLabel, newCls] = document.getElementById('edit-result-sel').value.split('|');
+      log[idx].result = newLabel; log[idx].cls = newCls;
+      const clsMap = {hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'};
+      const laterAB = log.slice(idx+1).some(e=>e.type==='ab'&&e.slotIdx===entry.slotIdx);
+      if (!laterAB) gdLiveState.lastResult[entry.slotIdx] = {label:newLabel, cls:clsMap[newCls]||'b-gray'};
+      closeModal('confirm-modal');
+      renderLiveAB(); renderLiveLineup();
+    }
+  );
 }
 
 function liveNextBatter() {
@@ -4287,42 +4496,52 @@ function liveMoveInOrder(i, dir) {
 }
 
 // Sub a bench player into a specific lineup slot
-function liveSubLineupSlot(slotIdx) {
-  const bench = _liveBench();
-  if (!bench.length) return;
-  const opts = bench.map(p=>`<option value="${p.id}">${p.name} (#${p.jersey||'?'})</option>`).join('');
-  const sel = `<select id="sub-target-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:8px;border-radius:3px;font-size:.88rem">${opts}</select>`;
-  const slot = gdLineup[slotIdx];
-  const curSubId = gdLiveState.subs[slot.id];
-  const curName  = curSubId ? (S.players.find(x=>x.id===curSubId)||slot).name : slot.name;
-  document.getElementById('conf-msg').innerHTML = `Sub into spot <b>${slotIdx+1} — ${curName}</b>:<br><br>${sel}`;
-  document.getElementById('conf-ok').onclick = () => {
-    gdLiveState.subs[slot.id] = document.getElementById('sub-target-sel').value;
-    closeModal('confirm-modal');
-    renderLiveLineup(); renderLiveAB();
-  };
+function _openLiveModal(title, bodyHTML, onOk) {
+  document.getElementById('conf-title').textContent = title;
+  document.getElementById('conf-msg').innerHTML = bodyHTML;
+  const okBtn = document.getElementById('conf-ok');
+  okBtn.style.display = '';
+  okBtn.textContent = 'Confirm';
+  okBtn.onclick = onOk;
   openModal('confirm-modal');
 }
 
-// Sub a bench player into the at-bat slot specifically (button on the batter card)
+function liveSubLineupSlot(slotIdx) {
+  const bench = _liveBench();
+  if (!bench.length) { alert('No bench players available'); return; }
+  const slot     = gdLineup[slotIdx];
+  const curSubId = gdLiveState.subs[slot.id];
+  const curName  = curSubId ? (S.players.find(x=>x.id===curSubId)||slot).name : slot.name;
+  const opts     = bench.map(p=>`<option value="${p.id}">${p.name} (#${p.jersey||'?'}) · ${(p.positions||[]).slice(0,2).join('/')}</option>`).join('');
+  _openLiveModal(
+    `Sub into Spot ${slotIdx+1}`,
+    `<div style="margin-bottom:8px;font-size:.85rem">Replacing: <b>${curName}</b></div>
+     <select id="sub-target-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:10px;border-radius:3px;font-size:.9rem">${opts}</select>`,
+    () => {
+      gdLiveState.subs[slot.id] = document.getElementById('sub-target-sel').value;
+      closeModal('confirm-modal');
+      renderLiveLineup(); renderLiveAB();
+    }
+  );
+}
+
 function liveSubBatterModal(slotIdx) { liveSubLineupSlot(slotIdx); }
 
-// Sub any field position from the Defense tab
 function liveFieldSubModal(pos) {
   const present = S.players.filter(p => gdPresent.has(p.id));
   const cur     = gdFieldAssign[pos];
   const opts    = present.map(p=>`<option value="${p.id}" ${p.id===cur?'selected':''}>${p.name} (#${p.jersey||'?'}) · ${(p.positions||[]).slice(0,2).join('/')}</option>`).join('');
-  const sel     = `<select id="sub-target-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:8px;border-radius:3px;font-size:.88rem">${opts}</select>`;
-  document.getElementById('conf-msg').innerHTML = `Assign <b>${pos}</b>:<br><br>${sel}`;
-  document.getElementById('conf-ok').onclick = () => {
-    const pid = document.getElementById('sub-target-sel').value;
-    // Remove this player from any other position first
-    Object.keys(gdFieldAssign).forEach(p => { if (gdFieldAssign[p] === pid) delete gdFieldAssign[p]; });
-    gdFieldAssign[pos] = pid;
-    closeModal('confirm-modal');
-    renderLiveField(); renderLivePitcher();
-  };
-  openModal('confirm-modal');
+  _openLiveModal(
+    `Assign ${pos}`,
+    `<select id="sub-target-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:10px;border-radius:3px;font-size:.9rem">${opts}</select>`,
+    () => {
+      const pid = document.getElementById('sub-target-sel').value;
+      Object.keys(gdFieldAssign).forEach(p => { if (gdFieldAssign[p] === pid) delete gdFieldAssign[p]; });
+      gdFieldAssign[pos] = pid;
+      closeModal('confirm-modal');
+      renderLiveField(); renderLivePitcher();
+    }
+  );
 }
 
 // Pitcher swap — shows only eligible pitchers (available, not current)
@@ -4352,20 +4571,20 @@ function livePitcherSwap() {
       <span style="font-size:.7rem;font-weight:700;color:var(--accent)">Select →</span>
     </div>`;
   }).join('');
+  document.getElementById('conf-title').textContent = 'Change Pitcher';
   document.getElementById('conf-msg').innerHTML =
     `<div style="font-size:.72rem;color:var(--muted);margin-bottom:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px">Choose New Pitcher</div>` +
     (list || '<div style="padding:10px 0;color:var(--muted);font-size:.82rem">No other pitchers available</div>');
-  document.getElementById('conf-ok').style.display = 'none';
+  const okBtn = document.getElementById('conf-ok');
+  okBtn.style.display = 'none';
   openModal('confirm-modal');
 }
 
 function livePitcherSwapTo(pid) {
-  // Track the outgoing pitcher as pulled — they can't return
   const outgoing = gdFieldAssign['P'];
   if (outgoing && outgoing !== pid) {
     (gdLiveState.pulledPitchers = gdLiveState.pulledPitchers||[]).push(outgoing);
   }
-  // Remove new pitcher from any current field position
   Object.keys(gdFieldAssign).forEach(pos => { if (gdFieldAssign[pos] === pid) delete gdFieldAssign[pos]; });
   gdFieldAssign['P'] = pid;
   closeModal('confirm-modal');
