@@ -276,6 +276,42 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .runner-btn:active{background:var(--surface)}
 .runner-btn.danger{color:var(--danger);border-color:rgba(228,0,43,.4);background:rgba(228,0,43,.07)}
 .runner-btn.danger:active{background:rgba(228,0,43,.2)}
+/* ── Post-play bottom sheet ── */
+.postplay-sheet{position:fixed;inset:0;z-index:2000;display:flex;align-items:flex-end;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s}
+.postplay-sheet.open{opacity:1;pointer-events:auto}
+.postplay-inner{width:100%;max-width:480px;margin:0 auto;background:var(--surface);border-radius:14px 14px 0 0;padding:16px 14px 28px;max-height:85vh;overflow-y:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.postplay-sheet.open .postplay-inner{transform:translateY(0)}
+.postplay-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
+.postplay-result-badge{display:flex;align-items:center;gap:8px;font-size:.92rem;font-weight:900;margin-bottom:14px}
+.pp-section{margin-bottom:12px}
+.pp-section-lbl{font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:7px}
+.pp-zone-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pp-zone-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 4px;border-radius:5px;cursor:pointer;font-size:.68rem;font-weight:800;text-align:center;transition:background .15s,border-color .15s}
+.pp-zone-btn.selected{background:rgba(201,168,76,.18);border-color:var(--gold);color:var(--gold)}
+.pp-zone-btn:active{background:var(--surface)}
+.pp-error-btn{width:100%;background:rgba(228,0,43,.08);border:1px solid rgba(228,0,43,.35);color:var(--danger);padding:11px 12px;border-radius:5px;cursor:pointer;font-size:.78rem;font-weight:800;text-align:left;margin-bottom:5px;transition:background .15s}
+.pp-error-btn:active{background:rgba(228,0,43,.18)}
+.pp-score-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:5px;cursor:pointer;font-size:.75rem;font-weight:800;display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;transition:background .15s}
+.pp-score-btn:active{background:var(--surface)}
+.pp-score-btn:disabled{opacity:.45}
+.pp-done-btn{width:100%;background:var(--accent);border:none;color:#fff;padding:13px;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:900;letter-spacing:.4px;margin-top:4px}
+/* ── Dedicated runner modal ── */
+.runner-modal{position:fixed;inset:0;z-index:2100;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .18s}
+.runner-modal.open{opacity:1;pointer-events:auto}
+.runner-modal-inner{width:100%;max-width:480px;margin:0 auto;background:var(--surface);border-radius:14px 14px 0 0;padding:14px 14px 30px;max-height:80vh;overflow-y:auto;transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.runner-modal.open .runner-modal-inner{transform:translateY(0)}
+.runner-modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.runner-modal-title{font-size:.95rem;font-weight:900}
+.runner-modal-close{background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:2px 8px;line-height:1}
+.rm-section-lbl{font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:10px 0 6px}
+.rm-section-lbl:first-of-type{margin-top:0}
+.rm-btn-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.rm-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px 8px;border-radius:5px;cursor:pointer;font-size:.75rem;font-weight:800;text-align:center;transition:background .15s}
+.rm-btn:active{background:var(--surface)}
+.rm-btn.danger{color:var(--danger);border-color:rgba(228,0,43,.4);background:rgba(228,0,43,.07)}
+.rm-btn.danger:active{background:rgba(228,0,43,.2)}
+.rm-btn.score{color:#4caf50;border-color:rgba(76,175,80,.4);background:rgba(76,175,80,.07)}
+.rm-btn.score:active{background:rgba(76,175,80,.18)}
 /* ── Splash screen animations ───────────────────────────────── */
 @keyframes splashSpin    { to   { transform: rotate(360deg); } }
 @keyframes splashFloat   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
@@ -564,57 +600,35 @@ main{padding:16px;max-width:860px;margin:0 auto}
   </div>
 </div>
 
-<!-- HIT LOCATION MODAL -->
-<div class="overlay" id="hit-location-modal">
-  <div class="modal" style="max-width:360px">
-    <div class="modal-hdr">
-      <h2 id="hit-loc-title">Where did it go?</h2>
-      <button class="x-btn" onclick="liveSkipHitLocation()">✕</button>
+<!-- POST-PLAY SHEET -->
+<div class="postplay-sheet" id="postplay-sheet">
+  <div class="postplay-inner">
+    <div class="postplay-handle"></div>
+    <div id="pp-result-row" class="postplay-result-badge"></div>
+    <div class="pp-section" id="pp-error-section" style="display:none">
+      <div class="pp-section-lbl">Error on the play?</div>
+      <div id="pp-error-btns"></div>
     </div>
-    <div class="modal-body" style="padding:10px 14px">
-      <p style="font-size:.7rem;color:var(--muted);margin-bottom:10px;text-align:center">Tap the field to mark the hit location</p>
-      <div style="position:relative;user-select:none;touch-action:none">
-        <svg id="hit-loc-svg" viewBox="0 0 300 260" style="width:100%;cursor:crosshair;display:block;border-radius:6px;overflow:hidden" onclick="liveMarkHitLocation(event)" ontouchend="liveMarkHitLocation(event)">
-          <!-- Sky/warning track -->
-          <rect width="300" height="260" fill="#0a150a"/>
-          <!-- Outfield grass -->
-          <path d="M 150,245 L 18,245 Q 18,20 150,20 Q 282,20 282,245 Z" fill="#0e2410"/>
-          <!-- Infield dirt -->
-          <ellipse cx="150" cy="185" rx="68" ry="58" fill="#1e1008"/>
-          <!-- Warning track arc -->
-          <path d="M 22,245 Q 150,24 278,245" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="6"/>
-          <!-- Foul lines -->
-          <line x1="150" y1="245" x2="22" y2="30" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>
-          <line x1="150" y1="245" x2="278" y2="30" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>
-          <!-- Base paths -->
-          <polygon points="150,165 110,205 150,245 190,205" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
-          <!-- Pitcher mound -->
-          <circle cx="150" cy="200" r="8" fill="#2a1a08" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
-          <!-- Bases -->
-          <rect x="144" y="159" width="12" height="12" fill="white" opacity=".9" transform="rotate(45,150,165)"/>
-          <rect x="104" y="199" width="12" height="12" fill="white" opacity=".9" transform="rotate(45,110,205)"/>
-          <rect x="184" y="199" width="12" height="12" fill="white" opacity=".9" transform="rotate(45,190,205)"/>
-          <!-- Home plate -->
-          <polygon points="150,245 143,238 143,230 157,230 157,238" fill="white" opacity=".9"/>
-          <!-- Zone labels -->
-          <text x="150" y="70"  text-anchor="middle" fill="rgba(255,255,255,.18)" font-size="9" font-family="sans-serif">CF</text>
-          <text x="60"  y="100" text-anchor="middle" fill="rgba(255,255,255,.18)" font-size="9" font-family="sans-serif">LF</text>
-          <text x="240" y="100" text-anchor="middle" fill="rgba(255,255,255,.18)" font-size="9" font-family="sans-serif">RF</text>
-          <text x="112" y="190" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">SS</text>
-          <text x="188" y="190" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">2B</text>
-          <text x="88"  y="218" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">3B</text>
-          <text x="213" y="218" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">1B</text>
-          <!-- Hit dot (hidden until tapped) -->
-          <circle id="hit-loc-dot" cx="-30" cy="-30" r="9" fill="var(--accent)" opacity=".9" stroke="white" stroke-width="2"/>
-          <circle id="hit-loc-pulse" cx="-30" cy="-30" r="16" fill="none" stroke="var(--accent)" stroke-width="1.5" opacity=".4"/>
-        </svg>
-      </div>
-      <div id="hit-loc-zone" style="text-align:center;font-size:.72rem;color:var(--gold);font-weight:800;margin-top:8px;min-height:18px"></div>
+    <div class="pp-section" id="pp-score-section" style="display:none">
+      <div class="pp-section-lbl">Did anyone score?</div>
+      <div id="pp-score-btns"></div>
     </div>
-    <div class="modal-ftr">
-      <button class="btn btn-outline" onclick="liveSkipHitLocation()">Skip</button>
-      <button class="btn btn-primary" id="hit-loc-save" onclick="liveConfirmHitLocation()" disabled style="opacity:.4">Save Location</button>
+    <div class="pp-section" id="pp-zone-section" style="display:none">
+      <div class="pp-section-lbl">Where did it go?</div>
+      <div class="pp-zone-grid" id="pp-zone-grid"></div>
     </div>
+    <button class="pp-done-btn" onclick="ppDone()">Done ✓</button>
+  </div>
+</div>
+
+<!-- RUNNER MODAL -->
+<div class="runner-modal" id="runner-modal">
+  <div class="runner-modal-inner">
+    <div class="runner-modal-hdr">
+      <span class="runner-modal-title" id="runner-modal-title">Runner</span>
+      <button class="runner-modal-close" onclick="closeRunnerModal()">✕</button>
+    </div>
+    <div id="runner-modal-body"></div>
   </div>
 </div>
 
@@ -977,7 +991,12 @@ main{padding:16px;max-width:860px;margin:0 auto}
               <text id="lb-2B-txt" x="40" y="14" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
               <text id="lb-3B-txt" x="12" y="40" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
             </svg>
-            <div style="display:flex;gap:4px">
+            <div id="live-bases-names" style="display:flex;justify-content:space-between;font-size:.52rem;font-weight:800;color:var(--muted);margin-top:1px;width:76px;margin-left:auto;margin-right:auto;line-height:1.1">
+              <span id="lbn-3B" style="text-align:left;flex:1"></span>
+              <span id="lbn-2B" style="text-align:center;flex:1"></span>
+              <span id="lbn-1B" style="text-align:right;flex:1"></span>
+            </div>
+            <div style="display:flex;gap:4px;margin-top:3px">
               <button class="live-half-btn" onclick="liveUndo()" id="live-undo-half-btn" style="opacity:.5" title="Undo last action">↩</button>
               <button class="live-half-btn" onclick="liveNextInning()">End Half ▶</button>
             </div>
@@ -3997,11 +4016,17 @@ function renderLiveBases() {
     const p    = pid ? S.players.find(x => x.id === pid) : null;
     const poly = document.getElementById('lb-' + base);
     const txt  = document.getElementById('lb-' + base + '-txt');
+    const lbl  = document.getElementById('lbn-' + base);
     if (poly) {
       poly.style.fill   = pid ? 'var(--accent)' : 'var(--surface2)';
       poly.style.stroke = pid ? 'var(--accent)' : 'var(--border)';
     }
     if (txt) txt.textContent = p ? ('#' + (p.jersey || '?')) : '';
+    if (lbl) {
+      const first = p ? p.name.split(' ')[0] : '';
+      lbl.textContent = first;
+      lbl.style.color = pid ? 'var(--gold)' : 'var(--muted)';
+    }
   });
 }
 
@@ -4028,10 +4053,6 @@ function renderLiveAB() {
     {label:'LO',cls:'out'},{label:'DP',cls:'out'},{label:'Sac',cls:'out'},{label:'SF',cls:'neutral'},
     {label:'E',cls:'out'},{label:'CI',cls:'neutral'},
   ];
-  const ADVANCES = [
-    {label:'WP',tip:'Wild Pitch'},{label:'PB',tip:'Passed Ball'},{label:'Balk',tip:'Balk'},
-    {label:'SB',tip:'Stolen Base'},{label:'CS',tip:'Caught Stealing'},{label:'PIK',tip:'Pickoff'},
-  ];
 
   card.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -4055,12 +4076,10 @@ function renderLiveAB() {
     ${_liveShowMore?`<div class="live-outcome-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:6px">
       ${MORE.map(o=>`<button class="live-ab-btn ${o.cls}" onclick="liveAB('${o.label}','${o.cls}')">${o.label}</button>`).join('')}
     </div>`:''}
-    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-      <div style="font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px">Advances / Events <span style="font-weight:500;letter-spacing:0;text-transform:none">(don't advance batter)</span></div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px">
-        ${ADVANCES.map(a=>`<button class="live-ab-btn neutral" title="${a.tip}" onclick="liveLogField('${a.label}')" style="padding:6px 10px;flex:1;min-width:48px">${a.label}</button>`).join('')}
-      </div>
-    </div>
+    <button onclick="openRunnerEventModal()" style="width:100%;margin-top:8px;background:none;border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:4px;cursor:pointer;font-size:.75rem;font-weight:800;text-align:left;display:flex;align-items:center;justify-content:space-between">
+      <span>⚾ Baserunner Event</span>
+      <span style="color:var(--muted);font-size:.62rem;font-weight:600">SB · WP · PB · Balk · Error · CS</span>
+    </button>
     <div class="live-batter-nav" style="margin-top:10px">
       <button onclick="liveUndo()" ${canUndo?'':'disabled'} style="opacity:${canUndo?1:.35}">↩ Undo</button>
       <button onclick="livePrevBatter()">◁ Prev</button>
@@ -4204,25 +4223,47 @@ function _liveStat(pid, key, n) {
   gdLiveState.stats[pid][key] = (gdLiveState.stats[pid][key] || 0) + (n || 1);
 }
 
-// Advance all on-base runners N bases and place batter at their destination.
-// Returns the number of runs that scored.
-function _advanceAllByHit(bases, hitN, batterId) {
-  const NUM = { '1B':1, '2B':2, '3B':3 };
+// Place batter at destBase and advance runners correctly:
+//   D=1 (single/walk): cascade force up through any consecutive chain at 1B
+//   D=2 (double):      everyone at 1B+2B is displaced to ≥3B (batter ran through them)
+//   D=3 (triple):      everyone at 1B/2B/3B scores (batter ran through all)
+// Runners AHEAD of batter's destination stay unless bumped by displaced runners.
+// Returns number of runs scored.
+function _placeHitter(bases, destBase, batterId) {
+  const NUM  = { '1B':1, '2B':2, '3B':3 };
   const BASE = { 1:'1B', 2:'2B', 3:'3B' };
-  const fresh = { '1B':null, '2B':null, '3B':null };
-  let runs = 0;
-  // Process most-advanced runner first to avoid stomping
-  ['3B','2B','1B'].forEach(b => {
-    const pid = bases[b];
-    if (!pid) return;
-    const dest = NUM[b] + hitN;
-    if (dest >= 4) { _liveStat(pid, 'r'); runs++; }
-    else           { fresh[BASE[dest]] = pid; }
-  });
-  // Place batter
-  if (hitN >= 1 && hitN <= 3) fresh[BASE[hitN]] = batterId;
-  // Write back
-  bases['1B'] = fresh['1B']; bases['2B'] = fresh['2B']; bases['3B'] = fresh['3B'];
+  const D    = NUM[destBase];
+  let runs   = 0;
+
+  if (D === 1) {
+    // Cascade: force chain starting at 1B propagates upward through consecutive occupied bases
+    if (bases['1B'] && bases['2B'] && bases['3B']) {
+      _liveStat(bases['3B'], 'r'); runs++;
+      bases['3B'] = bases['2B']; bases['2B'] = bases['1B']; bases['1B'] = batterId;
+    } else if (bases['1B'] && bases['2B']) {
+      bases['3B'] = bases['2B']; bases['2B'] = bases['1B']; bases['1B'] = batterId;
+    } else if (bases['1B']) {
+      bases['2B'] = bases['1B']; bases['1B'] = batterId;
+    } else {
+      bases['1B'] = batterId;
+    }
+  } else {
+    // D=2 or D=3: collect runners the batter ran "through" (all N ≤ D), most-advanced first
+    const toMove = [];
+    for (let n = D; n >= 1; n--) {
+      if (bases[BASE[n]]) { toMove.push(bases[BASE[n]]); bases[BASE[n]] = null; }
+    }
+    bases[destBase] = batterId;
+    // Place displaced runners at the first open slot ≥ D+1
+    // (skip over any "stay" runners who were originally ahead of the batter)
+    for (const pid of toMove) {
+      let placed = false;
+      for (let slot = D + 1; slot <= 3; slot++) {
+        if (!bases[BASE[slot]]) { bases[BASE[slot]] = pid; placed = true; break; }
+      }
+      if (!placed) { _liveStat(pid, 'r'); runs++; }
+    }
+  }
   return runs;
 }
 
@@ -4249,38 +4290,33 @@ function liveAB(label, cls) {
     _liveStat(batterId, 'rbi', runners.length + 1);
     gdLiveState.usScore += runners.length + 1;
   } else if (label === '1B') {
-    // All runners advance 1 base; 3B scores
-    const runs = _advanceAllByHit(bases, 1, batterId);
+    // Batter takes 1B. Only the runner on 1B is displaced (cascade up).
+    // Runners on 2B/3B stay — coach advances them via the diamond.
+    const runs = _placeHitter(bases, '1B', batterId);
     _liveStat(batterId, 'rbi', runs);
     gdLiveState.usScore += runs;
   } else if (label === '2B') {
-    // All runners advance 2 bases; 2B & 3B score
-    const runs = _advanceAllByHit(bases, 2, batterId);
+    // Batter takes 2B. Only runner on 2B is displaced (cascade up).
+    // Runner on 1B stays — coach advances them via the diamond.
+    const runs = _placeHitter(bases, '2B', batterId);
     _liveStat(batterId, 'rbi', runs);
     gdLiveState.usScore += runs;
   } else if (label === '3B') {
-    // All runners advance 3 bases — everyone scores
-    const runs = _advanceAllByHit(bases, 3, batterId);
+    // Batter takes 3B. Only runner on 3B is displaced (scores).
+    // Runners on 1B/2B stay — coach advances them via the diamond.
+    const runs = _placeHitter(bases, '3B', batterId);
     _liveStat(batterId, 'rbi', runs);
     gdLiveState.usScore += runs;
-  } else if (label === 'ROE') {
-    // Error — batter reaches 1B, runners don't auto-advance (coach adjusts)
-    bases['1B'] = batterId;
-  } else if (label === 'BB' || label === 'HBP' || label === 'IBB' || label === 'CI') {
-    // Forced advances only (unoccupied bases stay put)
-    if (bases['1B'] && bases['2B'] && bases['3B']) {
-      _liveStat(bases['3B'], 'r'); _liveStat(batterId, 'rbi');
-      gdLiveState.usScore++;
-      bases['3B'] = bases['2B']; bases['2B'] = bases['1B']; bases['1B'] = batterId;
-    } else if (bases['1B'] && bases['2B']) {
-      bases['3B'] = bases['2B']; bases['2B'] = bases['1B']; bases['1B'] = batterId;
-    } else if (bases['1B']) {
-      bases['2B'] = bases['1B']; bases['1B'] = batterId;
-    } else {
-      bases['1B'] = batterId;
-    }
-  } else if (label === 'FC') {
-    bases['1B'] = batterId; // one runner put out — coach removes via diamond
+  } else if (label === 'ROE' || label === 'FC' || label === 'CI') {
+    // Batter reaches 1B; only 1B runner is displaced.
+    const runs = _placeHitter(bases, '1B', batterId);
+    _liveStat(batterId, 'rbi', runs);
+    gdLiveState.usScore += runs;
+  } else if (label === 'BB' || label === 'HBP' || label === 'IBB') {
+    // True force advance — same cascade from 1B as a single.
+    const runs = _placeHitter(bases, '1B', batterId);
+    _liveStat(batterId, 'rbi', runs);
+    gdLiveState.usScore += runs;
   } else if (label === 'SF') {
     if (bases['3B']) { _liveStat(bases['3B'], 'r'); _liveStat(batterId, 'rbi'); gdLiveState.usScore++; bases['3B'] = null; }
   }
@@ -4291,84 +4327,193 @@ function liveAB(label, cls) {
   renderLiveLineup();
   renderLiveBases();
   renderLiveInning();
-  if (BALL_IN_PLAY.has(label)) promptHitLocation(entry, label);
+  _showPostPlay(entry, label);
 }
 
-let _hitLocEntry = null, _hitLocX = null, _hitLocY = null;
+// ── Post-play sheet ───────────────────────────────────────────
+let _ppEntry = null;
 
-function promptHitLocation(entry, label) {
-  _hitLocEntry = entry;
-  _hitLocX = null; _hitLocY = null;
-  document.getElementById('hit-loc-title').textContent = label + ' — Where did it go?';
-  document.getElementById('hit-loc-dot').setAttribute('cx', -30);
-  document.getElementById('hit-loc-dot').setAttribute('cy', -30);
-  document.getElementById('hit-loc-pulse').setAttribute('cx', -30);
-  document.getElementById('hit-loc-pulse').setAttribute('cy', -30);
-  document.getElementById('hit-loc-zone').textContent = '';
-  document.getElementById('hit-loc-save').disabled = true;
-  document.getElementById('hit-loc-save').style.opacity = '.4';
-  document.getElementById('hit-location-modal').classList.add('open');
+const PP_ZONES = [
+  'Left Field','Center Field','Right Field',
+  'Left Side / SS','Up the Middle','Right Side / 2B',
+  '3rd Base Side','Short IF / Middle','1st Base Side'
+];
+
+const BATTER_REACHED = new Set(['1B','2B','3B','ROE','FC','CI','BB','HBP','IBB']);
+
+function _ppBatterId(slotIdx) {
+  const slot = gdLineup[slotIdx];
+  const subId = slot && gdLiveState.subs[slot.id];
+  return subId || slot?.id;
 }
 
-function liveMarkHitLocation(e) {
-  if (e.cancelable) e.preventDefault();
-  const src  = e.changedTouches ? e.changedTouches[0] : e;
-  const svg  = document.getElementById('hit-loc-svg');
-  const rect = svg.getBoundingClientRect();
-  const vb   = svg.viewBox.baseVal;
-  const x    = ((src.clientX - rect.left) / rect.width)  * vb.width;
-  const y    = ((src.clientY - rect.top)  / rect.height) * vb.height;
-  _hitLocX = +(x / vb.width).toFixed(3);
-  _hitLocY = +(y / vb.height).toFixed(3);
-  document.getElementById('hit-loc-dot').setAttribute('cx', x);
-  document.getElementById('hit-loc-dot').setAttribute('cy', y);
-  document.getElementById('hit-loc-pulse').setAttribute('cx', x);
-  document.getElementById('hit-loc-pulse').setAttribute('cy', y);
-  // Determine zone label
-  const zone = _hitZoneLabel(_hitLocX, _hitLocY);
-  document.getElementById('hit-loc-zone').textContent = zone;
-  document.getElementById('hit-loc-save').disabled = false;
-  document.getElementById('hit-loc-save').style.opacity = '1';
+function _ppFirstName(pid) {
+  const p = pid ? S.players.find(x => x.id === pid) : null;
+  return p ? `#${p.jersey||'?'} ${p.name.split(' ')[0]}` : '?';
 }
 
-function _hitZoneLabel(px, py) {
-  // py: 0=top(outfield), 1=bottom(home). px: 0=left, 1=right
-  if (py < 0.42) {
-    if (px < 0.38) return 'Left Field';
-    if (px > 0.62) return 'Right Field';
-    return 'Center Field';
+function _showPostPlay(entry, label) {
+  _ppEntry = entry;
+  const bases = gdLiveState.bases || {};
+
+  // Badge row
+  const clsMap = {hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'};
+  document.getElementById('pp-result-row').innerHTML =
+    `<span style="font-weight:700">${_ppFirstName(_ppBatterId(entry.slotIdx))}</span>` +
+    `<span class="badge ${clsMap[entry.cls]||'b-gray'}" style="font-size:.8rem;padding:3px 9px">${label}</span>`;
+
+  const batterReached = BATTER_REACHED.has(label) && label !== 'HR';
+
+  // Error advance section
+  const errSec  = document.getElementById('pp-error-section');
+  const errBtns = document.getElementById('pp-error-btns');
+  errBtns.innerHTML = '';
+  if (batterReached) {
+    const pid = _ppBatterId(entry.slotIdx);
+    const batterBase = ['1B','2B','3B'].find(b => bases[b] === pid);
+    if (batterBase && batterBase !== '3B') {
+      const nextBase = batterBase === '1B' ? '2B' : '3B';
+      const btn = document.createElement('button');
+      btn.className = 'pp-error-btn';
+      btn.innerHTML = `⚠ Batter advances to <strong>${nextBase}</strong> on Error`;
+      btn.onclick = () => _ppAdvanceOnError(pid, batterBase, nextBase, btn);
+      errBtns.appendChild(btn);
+      errSec.style.display = '';
+    } else { errSec.style.display = 'none'; }
+  } else { errSec.style.display = 'none'; }
+
+  // Score section — runners currently on 2B/3B (not forced-scored) can be scored
+  const scoreSec  = document.getElementById('pp-score-section');
+  const scoreBtns = document.getElementById('pp-score-btns');
+  scoreBtns.innerHTML = '';
+  if (batterReached) {
+    const scoreable = ['3B','2B'].filter(b => bases[b]);
+    if (scoreable.length) {
+      scoreable.forEach(b => {
+        const pid = bases[b];
+        const btn = document.createElement('button');
+        btn.className = 'pp-score-btn';
+        btn.innerHTML = `<span style="font-weight:900">${_ppFirstName(pid)}</span><span style="color:var(--ok);font-size:.7rem">on ${b} &nbsp;→&nbsp; Scores ✓</span>`;
+        btn.onclick = () => _ppScoreRunner(pid, b, btn);
+        scoreBtns.appendChild(btn);
+      });
+      scoreSec.style.display = '';
+    } else { scoreSec.style.display = 'none'; }
+  } else { scoreSec.style.display = 'none'; }
+
+  // Zone section — batted balls only
+  const zoneSec  = document.getElementById('pp-zone-section');
+  const zoneGrid = document.getElementById('pp-zone-grid');
+  if (BALL_IN_PLAY.has(label)) {
+    zoneGrid.innerHTML = PP_ZONES.map(z =>
+      `<button class="pp-zone-btn" data-zone="${z}" onclick="ppSelectZone(this,'${z}')">${z}</button>`
+    ).join('');
+    zoneSec.style.display = '';
+  } else { zoneSec.style.display = 'none'; }
+
+  // Only open sheet if at least one section is visible
+  const hasContent = errSec.style.display !== 'none' ||
+                     scoreSec.style.display !== 'none' ||
+                     zoneSec.style.display !== 'none';
+  if (hasContent) document.getElementById('postplay-sheet').classList.add('open');
+}
+
+function ppSelectZone(btn, zone) {
+  document.querySelectorAll('#pp-zone-grid .pp-zone-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  if (_ppEntry) _ppEntry.hitZone = zone;
+}
+
+function _ppAdvanceOnError(pid, fromBase, toBase, btn) {
+  const bases = gdLiveState.bases;
+  if (!bases[fromBase] || bases[fromBase] !== pid) return;
+  _liveBaseLog();
+  bases[toBase]   = pid;
+  bases[fromBase] = null;
+  renderLiveBases();
+  btn.disabled = true;
+  btn.style.opacity = '.4';
+  btn.innerHTML = `✓ Batter advanced to <strong>${toBase}</strong> on Error`;
+  // Re-check: can they advance further?
+  const errBtns = document.getElementById('pp-error-btns');
+  if (toBase !== '3B') {
+    const nextBase = toBase === '1B' ? '2B' : '3B';
+    const nb = document.createElement('button');
+    nb.className = 'pp-error-btn';
+    nb.innerHTML = `⚠ Batter advances to <strong>${nextBase}</strong> on Error`;
+    nb.onclick = () => _ppAdvanceOnError(pid, toBase, nextBase, nb);
+    errBtns.appendChild(nb);
   }
-  if (py < 0.72) {
-    if (px < 0.38) return 'Left Side / SS';
-    if (px > 0.62) return 'Right Side / 2B';
-    return 'Up the Middle';
+}
+
+function _ppScoreRunner(pid, fromBase, btn) {
+  const bases = gdLiveState.bases;
+  if (!bases[fromBase] || bases[fromBase] !== pid) return;
+  _liveBaseLog();
+  bases[fromBase] = null;
+  gdLiveState.usScore++;
+  _liveStat(pid, 'r');
+  renderLiveInning();
+  renderLiveBases();
+  btn.disabled = true;
+  btn.style.opacity = '.45';
+  btn.querySelector('span:last-child').textContent = `Scored ✓`;
+}
+
+function ppDone() {
+  document.getElementById('postplay-sheet').classList.remove('open');
+  _ppEntry = null;
+}
+
+// ── Baserunner event modal ────────────────────────────────────
+function openRunnerEventModal() {
+  const bases    = gdLiveState.bases || {};
+  const occupied = ['1B','2B','3B'].filter(b => bases[b]);
+  document.getElementById('runner-modal-title').textContent = 'Baserunner Event';
+  if (!occupied.length) {
+    document.getElementById('runner-modal-body').innerHTML =
+      `<div style="color:var(--muted);font-size:.82rem;padding:6px 0">No runners on base.<br>Tap a base on the diamond to place a runner.</div>`;
+  } else {
+    document.getElementById('runner-modal-body').innerHTML = occupied.map((b, i) => {
+      const pid  = bases[b];
+      const p    = S.players.find(x => x.id === pid);
+      const name = p ? `#${p.jersey||'?'} ${p.name}` : '?';
+      return `${i ? '<hr style="border:none;border-top:1px solid var(--border);margin:10px 0">' : ''}
+        <div class="rm-section-lbl" style="margin-top:0;color:var(--text)">${name} &nbsp;<span style="color:var(--muted);font-weight:600">on ${b}</span></div>
+        ${_rmAdvButtons(b)}
+        ${_rmOutButtons(b)}`;
+    }).join('');
   }
-  if (px < 0.38) return '3rd Base Side';
-  if (px > 0.62) return '1st Base Side';
-  return 'Short / Middle IF';
+  document.getElementById('runner-modal').classList.add('open');
 }
 
-function liveConfirmHitLocation() {
-  if (_hitLocEntry && _hitLocX !== null) {
-    _hitLocEntry.hitX = _hitLocX;
-    _hitLocEntry.hitY = _hitLocY;
-    _hitLocEntry.hitZone = _hitZoneLabel(_hitLocX, _hitLocY);
-  }
-  liveSkipHitLocation();
+function _rmAdvButtons(base) {
+  const toBase  = base === '1B' ? '2B' : base === '2B' ? '3B' : null;
+  const advLbl  = toBase ? `→ ${toBase}` : '→ Scores';
+  const advFn   = toBase ? `liveRunnerAdvance` : `liveRunnerScore`;
+  return `<div class="rm-section-lbl">Advance</div>
+    <div class="rm-btn-grid">
+      <button class="rm-btn score" onclick="${advFn}('${base}','SB');closeRunnerModal()">⚡ Stolen Base<br><span style="font-size:.6rem;font-weight:600;opacity:.8">${advLbl}</span></button>
+      <button class="rm-btn" onclick="${advFn}('${base}','WP');closeRunnerModal()">Wild Pitch<br><span style="font-size:.6rem;opacity:.7">${advLbl}</span></button>
+      <button class="rm-btn" onclick="${advFn}('${base}','PB');closeRunnerModal()">Passed Ball<br><span style="font-size:.6rem;opacity:.7">${advLbl}</span></button>
+      <button class="rm-btn" onclick="${advFn}('${base}','Balk');closeRunnerModal()">Balk<br><span style="font-size:.6rem;opacity:.7">${advLbl}</span></button>
+      <button class="rm-btn" onclick="${advFn}('${base}','E');closeRunnerModal()">Error<br><span style="font-size:.6rem;opacity:.7">${advLbl}</span></button>
+      <button class="rm-btn" onclick="${advFn}('${base}','Adv');closeRunnerModal()">Advance<br><span style="font-size:.6rem;opacity:.7">${advLbl}</span></button>
+    </div>`;
 }
 
-function liveSkipHitLocation() {
-  document.getElementById('hit-location-modal').classList.remove('open');
-  _hitLocEntry = null;
+function _rmOutButtons(base) {
+  return `<div class="rm-section-lbl" style="color:var(--danger)">Out</div>
+    <div class="rm-btn-grid">
+      <button class="rm-btn danger" onclick="liveRunnerOut('${base}','CS');closeRunnerModal()">Caught Stealing</button>
+      <button class="rm-btn danger" onclick="liveRunnerOut('${base}','PIK');closeRunnerModal()">Picked Off</button>
+      <button class="rm-btn danger" onclick="liveRunnerOut('${base}','Tag');closeRunnerModal()">Tagged Out</button>
+      <button class="rm-btn danger" onclick="liveRunnerOut('${base}','Out');closeRunnerModal()">Other Out</button>
+    </div>`;
 }
 
-function liveLogField(result) {
-  (gdLiveState.log = gdLiveState.log||[]).push({
-    type:'field', result, inning:gdLiveState.inning, half:gdLiveState.topBottom, ts:Date.now()
-  });
-  // Flash confirmation on the button briefly
-  const btns = document.querySelectorAll('#live-ab-card .live-ab-btn.neutral');
-  btns.forEach(b => { if (b.textContent.trim()===result) { b.style.background='rgba(201,168,76,.3)'; setTimeout(()=>b.style.background='',600); } });
+function closeRunnerModal() {
+  document.getElementById('runner-modal').classList.remove('open');
 }
 
 function liveUndo() {
@@ -4442,35 +4587,12 @@ function liveRunnerAction(base) {
     return;
   }
 
-  // Runner is on this base — show advance / out options
-  const toBase    = base==='1B' ? '2B' : base==='2B' ? '3B' : null;
-  const toLabel   = toBase || 'Home';
-  const advHeader = toBase ? `Advance to ${toLabel}` : 'Score (Home)';
-
-  const advRow = `
-    <div class="runner-section-lbl">${advHeader}</div>
-    <div class="runner-btn-row">
-      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','SB')">Stolen Base</button>
-      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','WP')">Wild Pitch</button>
-      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','PB')">Passed Ball</button>
-      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','Balk')">Balk</button>
-      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','E')">Error</button>
-      <button class="runner-btn" onclick="liveRunnerAdvance('${base}','Adv')">Advance</button>
-    </div>`;
-
-  const outRow = `
-    <div class="runner-section-lbl" style="color:var(--danger)">Out</div>
-    <div class="runner-btn-row">
-      <button class="runner-btn danger" onclick="liveRunnerOut('${base}','CS')">Caught Stealing</button>
-      <button class="runner-btn danger" onclick="liveRunnerOut('${base}','PIK')">Picked Off</button>
-      <button class="runner-btn danger" onclick="liveRunnerOut('${base}','Tag')">Tagged Out</button>
-      <button class="runner-btn danger" onclick="liveRunnerOut('${base}','Out')">Out</button>
-    </div>`;
-
-  document.getElementById('conf-title').textContent = `#${p.jersey||'?'} ${p.name} on ${base}`;
-  document.getElementById('conf-msg').innerHTML = advRow + outRow;
-  document.getElementById('conf-ok').style.display = 'none';
-  openModal('confirm-modal');
+  // Runner is on this base — open dedicated runner modal
+  document.getElementById('runner-modal-title').textContent =
+    `#${p.jersey||'?'} ${p.name} — ${base}`;
+  document.getElementById('runner-modal-body').innerHTML =
+    _rmAdvButtons(base) + _rmOutButtons(base);
+  document.getElementById('runner-modal').classList.add('open');
 }
 
 function liveRunnerAdvance(fromBase, reason) {
@@ -4483,7 +4605,7 @@ function liveRunnerAdvance(fromBase, reason) {
   bases[toBase]   = pid;
   bases[fromBase] = null;
   if (reason === 'SB') _liveStat(pid, 'sb');
-  closeModal('confirm-modal');
+  closeRunnerModal();
   renderLiveBases();
 }
 
@@ -4496,7 +4618,7 @@ function liveRunnerScore(fromBase, reason) {
   gdLiveState.usScore++;
   _liveStat(pid, 'r');
   if (reason === 'SB') _liveStat(pid, 'sb');
-  closeModal('confirm-modal');
+  closeRunnerModal();
   renderLiveInning();
   renderLiveBases();
 }
@@ -4510,7 +4632,7 @@ function liveRunnerOut(fromBase, reason) {
   gdLiveState.outs = Math.min(3, gdLiveState.outs + 1);
   if (reason === 'CS')  _liveStat(pid, 'cs');
   if (reason === 'PIK') _liveStat(pid, 'pik');
-  closeModal('confirm-modal');
+  closeRunnerModal();
   if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); }
   renderLiveInning();
   renderLiveBases();
