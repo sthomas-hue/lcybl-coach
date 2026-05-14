@@ -4204,6 +4204,28 @@ function _liveStat(pid, key, n) {
   gdLiveState.stats[pid][key] = (gdLiveState.stats[pid][key] || 0) + (n || 1);
 }
 
+// Advance all on-base runners N bases and place batter at their destination.
+// Returns the number of runs that scored.
+function _advanceAllByHit(bases, hitN, batterId) {
+  const NUM = { '1B':1, '2B':2, '3B':3 };
+  const BASE = { 1:'1B', 2:'2B', 3:'3B' };
+  const fresh = { '1B':null, '2B':null, '3B':null };
+  let runs = 0;
+  // Process most-advanced runner first to avoid stomping
+  ['3B','2B','1B'].forEach(b => {
+    const pid = bases[b];
+    if (!pid) return;
+    const dest = NUM[b] + hitN;
+    if (dest >= 4) { _liveStat(pid, 'r'); runs++; }
+    else           { fresh[BASE[dest]] = pid; }
+  });
+  // Place batter
+  if (hitN >= 1 && hitN <= 3) fresh[BASE[hitN]] = batterId;
+  // Write back
+  bases['1B'] = fresh['1B']; bases['2B'] = fresh['2B']; bases['3B'] = fresh['3B'];
+  return runs;
+}
+
 function liveAB(label, cls) {
   const idx    = gdLiveState.batterIdx;
   const slot   = gdLineup[idx];
@@ -4219,24 +4241,35 @@ function liveAB(label, cls) {
   };
   (gdLiveState.log = gdLiveState.log||[]).push(entry);
 
-  // Auto-place batter and handle scoring
+  // Auto-place batter and advance runners
   if (label === 'HR') {
     const runners = ['3B','2B','1B'].filter(b => bases[b]);
     runners.forEach(b => { _liveStat(bases[b], 'r'); bases[b] = null; });
     _liveStat(batterId, 'r'); _liveStat(batterId, 'hr');
     _liveStat(batterId, 'rbi', runners.length + 1);
     gdLiveState.usScore += runners.length + 1;
-  } else if (label === '1B' || label === 'ROE') {
-    bases['1B'] = batterId;
+  } else if (label === '1B') {
+    // All runners advance 1 base; 3B scores
+    const runs = _advanceAllByHit(bases, 1, batterId);
+    _liveStat(batterId, 'rbi', runs);
+    gdLiveState.usScore += runs;
   } else if (label === '2B') {
-    bases['2B'] = batterId;
+    // All runners advance 2 bases; 2B & 3B score
+    const runs = _advanceAllByHit(bases, 2, batterId);
+    _liveStat(batterId, 'rbi', runs);
+    gdLiveState.usScore += runs;
   } else if (label === '3B') {
-    bases['3B'] = batterId;
+    // All runners advance 3 bases — everyone scores
+    const runs = _advanceAllByHit(bases, 3, batterId);
+    _liveStat(batterId, 'rbi', runs);
+    gdLiveState.usScore += runs;
+  } else if (label === 'ROE') {
+    // Error — batter reaches 1B, runners don't auto-advance (coach adjusts)
+    bases['1B'] = batterId;
   } else if (label === 'BB' || label === 'HBP' || label === 'IBB' || label === 'CI') {
-    // Forced advances
+    // Forced advances only (unoccupied bases stay put)
     if (bases['1B'] && bases['2B'] && bases['3B']) {
-      _liveStat(bases['3B'], 'r');
-      _liveStat(batterId, 'rbi');
+      _liveStat(bases['3B'], 'r'); _liveStat(batterId, 'rbi');
       gdLiveState.usScore++;
       bases['3B'] = bases['2B']; bases['2B'] = bases['1B']; bases['1B'] = batterId;
     } else if (bases['1B'] && bases['2B']) {
@@ -4247,7 +4280,7 @@ function liveAB(label, cls) {
       bases['1B'] = batterId;
     }
   } else if (label === 'FC') {
-    bases['1B'] = batterId; // runner put out — coach removes via diamond
+    bases['1B'] = batterId; // one runner put out — coach removes via diamond
   } else if (label === 'SF') {
     if (bases['3B']) { _liveStat(bases['3B'], 'r'); _liveStat(batterId, 'rbi'); gdLiveState.usScore++; bases['3B'] = null; }
   }
