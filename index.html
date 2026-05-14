@@ -339,9 +339,25 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .spec-strip{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 12px}
 .spec-strip-lbl{font-size:.5rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:3px}
 .spec-strip-name{font-size:.9rem;font-weight:900}
+.spec-strip-name.sm{font-size:.75rem}
 .spec-strip-sub{font-size:.63rem;color:var(--muted);margin-top:2px}
 .spec-pitch-bar{height:5px;background:var(--surface2);border-radius:3px;margin-top:6px;overflow:hidden}
 .spec-pitch-fill{height:100%;border-radius:3px;transition:width .4s}
+.spec-nextup-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.spec-fielding-note{text-align:center;font-size:.62rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:4px 0}
+.spec-order-wrap{padding:0 12px;flex-shrink:0}
+.spec-order-summary{list-style:none;cursor:pointer;font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:space-between}
+.spec-order-summary::-webkit-details-marker{display:none}
+.spec-order-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:.78rem}
+.spec-order-row:last-child{border-bottom:none}
+.spec-order-row.cur{background:rgba(228,0,43,.07)}
+.spec-order-num{font-size:.62rem;font-weight:900;color:var(--muted);width:16px;text-align:right;flex-shrink:0}
+.spec-order-name{flex:1;font-weight:700}
+.spec-order-name.cur{color:var(--accent);font-weight:900}
+.spec-order-badge{font-size:.52rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;padding:2px 5px;border-radius:3px;white-space:nowrap}
+.spec-order-badge.ab{background:var(--accent);color:#fff}
+.spec-order-badge.od{background:var(--surface2);color:var(--gold)}
+.spec-order-badge.ih{background:var(--surface2);color:var(--muted)}
 .spec-log{flex:1;overflow-y:auto;padding:8px 14px}
 .spec-log-entry{padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:8px;font-size:.74rem}
 .spec-log-entry:last-child{border-bottom:none}
@@ -795,19 +811,42 @@ main{padding:16px;max-width:860px;margin:0 auto}
       <text id="sd-3B-txt" x="12" y="40" text-anchor="middle" fill="#fff" font-size="7" font-weight="900" pointer-events="none"></text>
     </svg>
   </div>
-  <div class="spec-strips">
-    <div class="spec-strip" id="spec-pitcher-strip" style="display:none">
+  <!-- Pitcher section — only shown when our team is fielding -->
+  <div class="spec-strips" id="spec-pitcher-section" style="display:none">
+    <div class="spec-strip" id="spec-pitcher-strip">
       <div class="spec-strip-lbl">Pitching</div>
       <div class="spec-strip-name" id="spec-pitcher-name">—</div>
       <div class="spec-strip-sub" id="spec-pitcher-sub"></div>
       <div class="spec-pitch-bar"><div class="spec-pitch-fill" id="spec-pitch-fill" style="width:0%;background:var(--ok)"></div></div>
     </div>
-    <div class="spec-strip" id="spec-batter-strip" style="display:none">
-      <div class="spec-strip-lbl">At Bat</div>
-      <div class="spec-strip-name" id="spec-batter-name">—</div>
-      <div class="spec-strip-sub" id="spec-batter-sub"></div>
+    <div class="spec-fielding-note" id="spec-fielding-note"></div>
+  </div>
+
+  <!-- Batting section — only shown when our team is batting -->
+  <div class="spec-strips" id="spec-batting-section" style="display:none">
+    <div class="spec-strip">
+      <div class="spec-strip-lbl">⚾ At Bat</div>
+      <div class="spec-strip-name" id="spec-atbat-name">—</div>
+      <div class="spec-strip-sub" id="spec-atbat-sub"></div>
+    </div>
+    <div class="spec-nextup-row">
+      <div class="spec-strip">
+        <div class="spec-strip-lbl">On Deck</div>
+        <div class="spec-strip-name sm" id="spec-ondeck-name">—</div>
+      </div>
+      <div class="spec-strip">
+        <div class="spec-strip-lbl">In the Hole</div>
+        <div class="spec-strip-name sm" id="spec-hole-name">—</div>
+      </div>
     </div>
   </div>
+
+  <!-- Batting order dropdown -->
+  <details class="spec-order-wrap" id="spec-order-wrap" style="display:none">
+    <summary class="spec-order-summary">Batting Order <span id="spec-order-arrow">▾</span></summary>
+    <div id="spec-order-list" style="background:var(--surface);border:1px solid var(--border);border-top:none;border-radius:0 0 6px 6px;margin-top:-1px"></div>
+  </details>
+
   <div class="spec-log" id="spec-log"></div>
 </div>
 
@@ -4212,10 +4251,11 @@ function gdStartLive() {
   const g = S.games.find(x => x.id === selGame);
   document.getElementById('live-us-lbl').textContent   = (S.name || 'US').toUpperCase().slice(0,8);
   document.getElementById('live-them-lbl').textContent = g ? (g.opponent||'THEM').toUpperCase().slice(0,8) : 'THEM';
+  const isHome = !(g?.location||'Home').toLowerCase().includes('away');
   gdLiveState = { usScore:0, themScore:0, inning:1, topBottom:'top', outs:0,
                   batterIdx:0, pitchCounts:{}, subs:{}, fieldSubs:{}, lastResult:{}, log:[],
                   pulledPitchers:[], bases:{'1B':null,'2B':null,'3B':null}, stats:{},
-                  basesOwner:{'1B':null,'2B':null,'3B':null} };
+                  basesOwner:{'1B':null,'2B':null,'3B':null}, isHome };
   _liveTab = 'lineup';
   renderLiveMode();
   gdGoStep(5);
@@ -5702,10 +5742,31 @@ function _publishLiveGame() {
   const log   = gdLiveState.log||[];
   const fmtLog= [];
   for (let i=log.length-1;i>=0&&fmtLog.length<20;i--){const f=_fmtLogEntry(log[i]);if(f)fmtLog.push(f);}
+  const _fmtPub = p => {
+    if (!p) return null;
+    const parts = (p.name||'').trim().split(/\s+/);
+    const first = parts[0]||''; const last = parts.slice(1).join(' ');
+    const display = last ? `${first[0].toUpperCase()}. ${last}` : first;
+    return { fmtName:`${display} #${p.jersey||'?'}`, jersey:p.jersey||'?' };
+  };
   const resolvePid = pid => {
     if(!pid)return null; const p=S.players.find(x=>x.id===pid);
-    return p?{name:p.name.split(' ')[0],jersey:p.jersey||'?'}:null;
+    return p ? { ..._fmtPub(p) } : null;
   };
+  const lineupData = gdLineup.map((slot,i) => {
+    const subId = gdLiveState.subs&&gdLiveState.subs[slot.id];
+    const p = subId ? (S.players.find(x=>x.id===subId)||slot) : slot;
+    return { ..._fmtPub(p), slotIdx:i };
+  });
+  const mkNext = offset => {
+    if (!gdLineup.length) return null;
+    const ni = (idx + offset) % gdLineup.length;
+    const ns = gdLineup[ni]; if (!ns) return null;
+    const nSub = gdLiveState.subs&&gdLiveState.subs[ns.id];
+    const np = nSub ? (S.players.find(x=>x.id===nSub)||ns) : ns;
+    return _fmtPub(np);
+  };
+  const bf = _fmtPub(batter);
   db.collection('live_games').doc(code).set({
     teamName: S.name||'Team',
     teamColor:(S.colors&&S.colors.primary)||'#e4002b',
@@ -5714,12 +5775,16 @@ function _publishLiveGame() {
     themScore:gdLiveState.themScore||0,
     inning:   gdLiveState.inning||1,
     topBottom:gdLiveState.topBottom||'top',
+    isHome:   gdLiveState.isHome!==false,
     outs:     gdLiveState.outs||0,
     bases:    {'1B':resolvePid(bases['1B']),'2B':resolvePid(bases['2B']),'3B':resolvePid(bases['3B'])},
-    batter:   batter?{name:batter.name,jersey:batter.jersey||'?',
-      positions:(batter.positions||[]).slice(0,3).join(' · ')||'—',
-      liveH:bStat.h||0,liveAB:bStat.ab||0,seasonAvg:_fmt3(batter.avg)}:null,
-    pitcher:  pit?{name:pit.name,jersey:pit.jersey||'?',thrown,limit:R.pitchLimit||85,era:_fmt2(pit.era)}:null,
+    batterIdx:idx,
+    lineup:   lineupData,
+    atBat:    bf ? { fmtName:bf.fmtName, positions:(batter.positions||[]).slice(0,3).join(' · ')||'—',
+                     liveH:bStat.h||0, liveAB:bStat.ab||0, seasonAvg:_fmt3(batter.avg) } : null,
+    onDeck:   mkNext(1),
+    inHole:   mkNext(2),
+    pitcher:  pit?{fmtName:(_fmtPub(pit)||{}).fmtName,jersey:pit.jersey||'?',thrown,limit:R.pitchLimit||85,era:_fmt2(pit.era)}:null,
     log:      fmtLog,
     isLive:   true,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -5808,43 +5873,100 @@ function initSpectatorMode(code) {
 }
 
 function renderSpectatorView(data) {
-  document.getElementById('spec-us-name').textContent   = (data.teamName||'US').toUpperCase().slice(0,8);
-  document.getElementById('spec-them-name').textContent = (data.opponent||'THEM').toUpperCase().slice(0,8);
+  // Scoreboard
+  document.getElementById('spec-us-name').textContent    = (data.teamName||'US').toUpperCase().slice(0,10);
+  document.getElementById('spec-them-name').textContent  = (data.opponent||'THEM').toUpperCase().slice(0,10);
   document.getElementById('spec-us-score').textContent   = data.usScore??0;
   document.getElementById('spec-them-score').textContent = data.themScore??0;
-  const ord=['1st','2nd','3rd','4th','5th','6th','7th'];
-  document.getElementById('spec-inning').textContent = (data.topBottom==='top'?'▲ ':'▼ ')+(ord[(data.inning||1)-1]||(data.inning||1)+'th');
-  [0,1,2].forEach(i=>document.getElementById('spec-out'+i).classList.toggle('on',i<(data.outs||0)));
+  const ord = ['1st','2nd','3rd','4th','5th','6th','7th'];
+  document.getElementById('spec-inning').textContent =
+    (data.topBottom==='top'?'▲ ':'▼ ') + (ord[(data.inning||1)-1]||(data.inning||1)+'th');
+  [0,1,2].forEach(i => document.getElementById('spec-out'+i).classList.toggle('on', i<(data.outs||0)));
+
+  // Bases diamond
   const color = data.teamColor||'var(--accent)';
   const bases = data.bases||{};
-  ['1B','2B','3B'].forEach(b=>{
-    const info=bases[b];
-    const poly=document.getElementById('sd-'+b); const txt=document.getElementById('sd-'+b+'-txt');
-    if(poly){poly.style.fill=info?color:'var(--surface2)';poly.style.stroke=info?color:'var(--border)';}
-    if(txt) txt.textContent=info?('#'+info.jersey):'';
+  ['1B','2B','3B'].forEach(b => {
+    const info = bases[b];
+    const poly = document.getElementById('sd-'+b);
+    const txt  = document.getElementById('sd-'+b+'-txt');
+    if (poly) { poly.style.fill=info?color:'var(--surface2)'; poly.style.stroke=info?color:'var(--border)'; }
+    if (txt)    txt.textContent = info ? ('#'+info.jersey) : '';
   });
-  const ps=document.getElementById('spec-pitcher-strip');
-  if (data.pitcher) {
-    ps.style.display='';
-    document.getElementById('spec-pitcher-name').textContent=`#${data.pitcher.jersey} ${data.pitcher.name}`;
-    const pct=Math.min(100,(data.pitcher.thrown||0)/(data.pitcher.limit||85)*100);
-    const pc=pct<60?'var(--ok)':pct<85?'var(--warn)':'var(--danger)';
-    document.getElementById('spec-pitcher-sub').textContent=`${data.pitcher.thrown||0} pitches · ${(data.pitcher.limit||85)-(data.pitcher.thrown||0)} left${data.pitcher.era&&data.pitcher.era!=='—'?' · '+data.pitcher.era+' ERA':''}`;
-    document.getElementById('spec-pitch-fill').style.width=pct+'%';
-    document.getElementById('spec-pitch-fill').style.background=pc;
-  } else ps.style.display='none';
-  const bs=document.getElementById('spec-batter-strip');
-  if (data.batter) {
-    bs.style.display='';
-    document.getElementById('spec-batter-name').textContent=`#${data.batter.jersey} ${data.batter.name}`;
-    document.getElementById('spec-batter-sub').textContent=`${data.batter.positions} · ${data.batter.liveH||0}-for-${data.batter.liveAB||0} today · ${data.batter.seasonAvg} season`;
-  } else bs.style.display='none';
-  const log=data.log||[];
-  document.getElementById('spec-log').innerHTML = log.length ? log.map(e=>{
-    if (!e.result) return `<div class="spec-log-entry"><span class="spec-log-half">${e.half||''}</span><span class="spec-log-desc" style="color:var(--muted);font-style:italic">${e.desc}</span></div>`;
-    const c=e.cls==='b-green'?'#4caf50':e.cls==='b-yellow'?'var(--gold)':e.cls==='b-red'?'var(--accent)':'var(--muted)';
-    return `<div class="spec-log-entry"><span class="spec-log-half">${e.half||''}</span><span class="spec-log-desc">${e.desc} <span style="color:${c};font-weight:900">${e.result}</span></span></div>`;
-  }).join('') : '<div style="color:var(--muted);font-size:.75rem;padding:10px 0">No plays logged yet.</div>';
+
+  // Home/away determines which team bats when
+  // Visiting team bats top (▲); home team bats bottom (▼)
+  const isHome      = data.isHome !== false;
+  const weAreBatting = isHome ? data.topBottom==='bot' : data.topBottom==='top';
+
+  // Pitcher section — only when we're fielding
+  const pitcherSec = document.getElementById('spec-pitcher-section');
+  if (!weAreBatting && data.pitcher) {
+    pitcherSec.style.display = '';
+    document.getElementById('spec-pitcher-name').textContent = data.pitcher.fmtName||'—';
+    const pct = Math.min(100,(data.pitcher.thrown||0)/(data.pitcher.limit||85)*100);
+    const pc  = pct<60?'var(--ok)':pct<85?'var(--warn)':'var(--danger)';
+    document.getElementById('spec-pitcher-sub').textContent =
+      `${data.pitcher.thrown||0} pitches · ${(data.pitcher.limit||85)-(data.pitcher.thrown||0)} left`+
+      (data.pitcher.era&&data.pitcher.era!=='—'?' · '+data.pitcher.era+' ERA':'');
+    document.getElementById('spec-pitch-fill').style.width      = pct+'%';
+    document.getElementById('spec-pitch-fill').style.background = pc;
+    document.getElementById('spec-fielding-note').textContent   =
+      (data.opponent||'Other team')+' batting';
+  } else {
+    pitcherSec.style.display = 'none';
+  }
+
+  // Batting section — only when we're batting
+  const battingSec = document.getElementById('spec-batting-section');
+  if (weAreBatting && data.atBat) {
+    battingSec.style.display = '';
+    document.getElementById('spec-atbat-name').textContent =
+      data.atBat.fmtName||'—';
+    document.getElementById('spec-atbat-sub').textContent =
+      `${data.atBat.positions||'—'} · ${data.atBat.liveH||0}-for-${data.atBat.liveAB||0} today · ${data.atBat.seasonAvg} avg`;
+    document.getElementById('spec-ondeck-name').textContent =
+      data.onDeck ? data.onDeck.fmtName : '—';
+    document.getElementById('spec-hole-name').textContent =
+      data.inHole ? data.inHole.fmtName : '—';
+  } else {
+    battingSec.style.display = 'none';
+  }
+
+  // Batting order dropdown — always available when lineup exists
+  const orderWrap = document.getElementById('spec-order-wrap');
+  const lineup    = data.lineup||[];
+  if (lineup.length) {
+    orderWrap.style.display = '';
+    const curIdx = data.batterIdx??0;
+    document.getElementById('spec-order-list').innerHTML = lineup.map((p,i) => {
+      const isAB = i===curIdx;
+      const isOD = i===((curIdx+1)%lineup.length);
+      const isIH = i===((curIdx+2)%lineup.length);
+      const badge = isAB
+        ? '<span class="spec-order-badge ab">At Bat</span>'
+        : isOD ? '<span class="spec-order-badge od">On Deck</span>'
+        : isIH ? '<span class="spec-order-badge ih">In the Hole</span>'
+        : '';
+      return `<div class="spec-order-row${isAB?' cur':''}">
+        <div class="spec-order-num">${i+1}</div>
+        <div class="spec-order-name${isAB?' cur':''}">${p.fmtName||'—'}</div>
+        ${badge}
+      </div>`;
+    }).join('');
+  } else {
+    orderWrap.style.display = 'none';
+  }
+
+  // Play log
+  const log = data.log||[];
+  document.getElementById('spec-log').innerHTML = log.length
+    ? log.map(e => {
+        if (!e.result) return `<div class="spec-log-entry"><span class="spec-log-half">${e.half||''}</span><span class="spec-log-desc" style="color:var(--muted);font-style:italic">${e.desc}</span></div>`;
+        const c = e.cls==='b-green'?'#4caf50':e.cls==='b-yellow'?'var(--gold)':e.cls==='b-red'?'var(--accent)':'var(--muted)';
+        return `<div class="spec-log-entry"><span class="spec-log-half">${e.half||''}</span><span class="spec-log-desc">${e.desc} <span style="color:${c};font-weight:900">${e.result}</span></span></div>`;
+      }).join('')
+    : '<div style="color:var(--muted);font-size:.75rem;padding:10px 0">No plays logged yet.</div>';
 }
 
 // ── Team page mode ────────────────────────────────────────────
