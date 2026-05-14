@@ -276,6 +276,13 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .runner-btn:active{background:var(--surface)}
 .runner-btn.danger{color:var(--danger);border-color:rgba(228,0,43,.4);background:rgba(228,0,43,.07)}
 .runner-btn.danger:active{background:rgba(228,0,43,.2)}
+/* ── Splash screen animations ───────────────────────────────── */
+@keyframes splashSpin    { to   { transform: rotate(360deg); } }
+@keyframes splashFloat   { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes kenBurns      { 0% { transform: scale(1.06) translate(-1.2%, 0.4%); } 100% { transform: scale(1.18) translate(1.2%, -0.8%); } }
+@keyframes splashDot     { 0%,80%,100% { opacity:.15; transform:scale(.8); } 40% { opacity:1; transform:scale(1); } }
+@keyframes splashReveal  { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes splashFadeOut { to { opacity:0; } }
 /* PRINT */
 @media print{
   body>*:not(#report-overlay){display:none!important}
@@ -308,6 +315,90 @@ main{padding:16px;max-width:860px;margin:0 auto}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SPLASH / LOADING SCREEN                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="splash-screen" style="position:fixed;inset:0;z-index:10000;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden">
+
+  <!-- Photo BG — same image applied by applyBg() -->
+  <div id="splash-bg" style="position:absolute;inset:-6%;background-size:cover;background-position:center;filter:contrast(1.32) brightness(0.3) saturate(0.4) sepia(0.1);animation:kenBurns 22s ease-in-out infinite alternate;will-change:transform"></div>
+
+  <!-- Vignette -->
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 38%,transparent 10%,rgba(0,0,0,.72) 100%);pointer-events:none"></div>
+  <!-- Color grade sweep -->
+  <div style="position:absolute;inset:0;background:linear-gradient(158deg,rgba(130,0,18,.52) 0%,rgba(0,0,0,.58) 48%,rgba(4,14,4,.42) 100%);pointer-events:none"></div>
+  <!-- Scanlines -->
+  <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.08) 3px,rgba(0,0,0,.08) 4px);pointer-events:none"></div>
+  <!-- Stadium top glow -->
+  <div style="position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:600px;height:380px;background:radial-gradient(ellipse at 50% 0%,rgba(255,195,60,.06) 0%,transparent 60%);pointer-events:none"></div>
+
+  <!-- Main content -->
+  <div style="position:relative;text-align:center;z-index:2;padding:0 20px">
+
+    <!-- Baseball wrapper: float + spin are stacked -->
+    <div style="margin-bottom:28px;animation:splashFloat 3.6s ease-in-out infinite">
+      <svg viewBox="0 0 100 100" width="92" height="92"
+           style="animation:splashSpin 11s linear infinite;display:block;margin:0 auto;filter:drop-shadow(0 10px 40px rgba(0,0,0,.95)) drop-shadow(0 0 24px rgba(228,0,43,.25))">
+        <defs>
+          <radialGradient id="sp-ball" cx="38%" cy="32%" r="62%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="55%" stop-color="#f4ede6"/>
+            <stop offset="100%" stop-color="#d5c8bc"/>
+          </radialGradient>
+          <radialGradient id="sp-shine" cx="32%" cy="26%" r="48%">
+            <stop offset="0%" stop-color="rgba(255,255,255,.55)"/>
+            <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+          </radialGradient>
+        </defs>
+        <!-- Ball body -->
+        <circle cx="50" cy="50" r="44" fill="url(#sp-ball)" stroke="#c0b5a8" stroke-width="1.5"/>
+        <!-- Shine -->
+        <ellipse cx="38" cy="35" rx="15" ry="10" fill="url(#sp-shine)"/>
+        <!-- Left seam arc -->
+        <path d="M34 12 C18 30 18 70 34 88" fill="none" stroke="#bf2121" stroke-width="2.6" stroke-linecap="round"/>
+        <!-- Right seam arc -->
+        <path d="M66 12 C82 30 82 70 66 88" fill="none" stroke="#bf2121" stroke-width="2.6" stroke-linecap="round"/>
+        <!-- Left stitches -->
+        <g stroke="#bf2121" stroke-width="1.8" stroke-linecap="round">
+          <line x1="30" y1="22" x2="38" y2="20"/><line x1="28" y1="31" x2="36" y2="30"/>
+          <line x1="27" y1="41" x2="35" y2="41"/><line x1="27" y1="51" x2="35" y2="52"/>
+          <line x1="28" y1="61" x2="36" y2="63"/><line x1="30" y1="71" x2="38" y2="74"/>
+          <line x1="32" y1="80" x2="39" y2="83"/>
+        </g>
+        <!-- Right stitches -->
+        <g stroke="#bf2121" stroke-width="1.8" stroke-linecap="round">
+          <line x1="70" y1="22" x2="62" y2="20"/><line x1="72" y1="31" x2="64" y2="30"/>
+          <line x1="73" y1="41" x2="65" y2="41"/><line x1="73" y1="51" x2="65" y2="52"/>
+          <line x1="72" y1="61" x2="64" y2="63"/><line x1="70" y1="71" x2="62" y2="74"/>
+          <line x1="68" y1="80" x2="61" y2="83"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Wordmark -->
+    <div style="animation:splashReveal .9s cubic-bezier(.22,1,.36,1) both;animation-delay:.18s;line-height:.88;margin-bottom:16px">
+      <div style="font-size:clamp(3rem,14vw,5.5rem);font-weight:900;letter-spacing:-4px;text-transform:uppercase;background:linear-gradient(180deg,#fff 20%,rgba(255,255,255,.65) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 2px 24px rgba(0,0,0,.95))">MONEY</div>
+      <div style="font-size:clamp(3rem,14vw,5.5rem);font-weight:900;letter-spacing:-4px;text-transform:uppercase;background:linear-gradient(180deg,#f0d070 0%,var(--gold) 55%,#8B6020 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 32px rgba(201,168,76,.55))">BALL</div>
+    </div>
+
+    <!-- Accent bar -->
+    <div style="width:72px;height:2px;background:linear-gradient(90deg,transparent,var(--accent) 30%,var(--accent) 70%,transparent);margin:0 auto 16px;animation:splashReveal .9s cubic-bezier(.22,1,.36,1) both;animation-delay:.32s"></div>
+
+    <!-- Tagline -->
+    <p style="color:rgba(255,255,255,.32);font-size:.68rem;margin:0 0 36px;font-weight:600;letter-spacing:2.8px;text-transform:uppercase;font-style:italic;animation:splashReveal .9s cubic-bezier(.22,1,.36,1) both;animation-delay:.44s">Intelligence Behind Every Lineup</p>
+
+    <!-- Loading dots -->
+    <div style="display:flex;gap:8px;justify-content:center;animation:splashReveal .9s cubic-bezier(.22,1,.36,1) both;animation-delay:.6s">
+      <div style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:splashDot 1.5s ease-in-out infinite;animation-delay:0s"></div>
+      <div style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:splashDot 1.5s ease-in-out infinite;animation-delay:.22s"></div>
+      <div style="width:7px;height:7px;border-radius:50%;background:var(--accent);animation:splashDot 1.5s ease-in-out infinite;animation-delay:.44s"></div>
+    </div>
+  </div>
+
+  <!-- Corner badge -->
+  <div style="position:absolute;bottom:20px;font-size:.56rem;font-weight:900;letter-spacing:2.5px;color:rgba(255,255,255,.14);text-transform:uppercase">LCYBL · 2026</div>
+</div>
 
 <!-- AUTH SCREEN -->
 <div id="auth-screen" class="overlay open" style="z-index:9999;background:#000;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow:hidden">
@@ -4937,11 +5028,47 @@ async function renderImgLibrary() {
 }
 
 function applyBg(url) {
-  const authEl = document.getElementById('auth-bg-img');
-  const appEl  = document.getElementById('app-bg-photo');
-  if (authEl) authEl.style.backgroundImage = url;
-  if (appEl)  appEl.style.backgroundImage  = url;
+  const authEl   = document.getElementById('auth-bg-img');
+  const appEl    = document.getElementById('app-bg-photo');
+  const splashEl = document.getElementById('splash-bg');
+  if (authEl)   authEl.style.backgroundImage   = url;
+  if (appEl)    appEl.style.backgroundImage     = url;
+  if (splashEl) splashEl.style.backgroundImage  = url;
 }
+
+// ── Splash dismiss ────────────────────────────────────────────
+const _splashShowAt = Date.now();
+function hideSplash() {
+  const splash = document.getElementById('splash-screen');
+  if (!splash || splash.dataset.hidden) return;
+  splash.dataset.hidden = '1';
+  const elapsed = Date.now() - _splashShowAt;
+  const wait    = Math.max(0, 1300 - elapsed); // show at least 1.3 s
+  setTimeout(() => {
+    splash.style.transition = 'opacity .65s ease';
+    splash.style.opacity    = '0';
+    setTimeout(() => { splash.style.display = 'none'; }, 680);
+  }, wait);
+}
+
+// ── Parallax on splash bg ─────────────────────────────────────
+(function() {
+  const bg = document.getElementById('splash-bg');
+  if (!bg) return;
+  // Mouse
+  document.addEventListener('mousemove', e => {
+    const px = (e.clientX / window.innerWidth  - 0.5) * 18;
+    const py = (e.clientY / window.innerHeight - 0.5) * 12;
+    bg.style.backgroundPosition = `calc(50% + ${px}px) calc(50% + ${py}px)`;
+  }, { passive: true });
+  // Device tilt (mobile)
+  window.addEventListener('deviceorientation', e => {
+    if (e.gamma == null) return;
+    const px = e.gamma * 0.35;
+    const py = Math.max(-30, Math.min(30, (e.beta || 45) - 45)) * 0.25;
+    bg.style.backgroundPosition = `calc(50% + ${px}px) calc(50% + ${py}px)`;
+  }, { passive: true });
+})();
 
 async function initAuthBg() {
   // 1. Personal device uploads take top priority
@@ -5159,16 +5286,19 @@ if (auth) {
         localStorage.setItem('lcybl_app', JSON.stringify(APP, (k,v) => k === 'team' ? undefined : v));
       }
       initApp();
+      hideSplash();
     } else {
       // Signed out — show auth screen
       document.getElementById('auth-screen').classList.add('open');
       document.getElementById('app').style.display = 'none';
+      hideSplash();
     }
   });
 } else {
   // Firebase unavailable — run offline
   document.getElementById('auth-screen').classList.remove('open');
   initApp();
+  hideSplash();
 }
 </script>
 </body>
