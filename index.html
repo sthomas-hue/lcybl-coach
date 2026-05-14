@@ -609,13 +609,33 @@ main{padding:16px;max-width:860px;margin:0 auto}
       <div class="pp-section-lbl">Error on the play?</div>
       <div id="pp-error-btns"></div>
     </div>
-    <div class="pp-section" id="pp-score-section" style="display:none">
-      <div class="pp-section-lbl">Did anyone score?</div>
-      <div id="pp-score-btns"></div>
-    </div>
     <div class="pp-section" id="pp-zone-section" style="display:none">
-      <div class="pp-section-lbl">Where did it go?</div>
-      <div class="pp-zone-grid" id="pp-zone-grid"></div>
+      <div class="pp-section-lbl">Where did it go? <span id="pp-zone-lbl" style="color:var(--gold);font-weight:700;text-transform:none;letter-spacing:0;margin-left:4px"></span></div>
+      <div style="position:relative;user-select:none;touch-action:none">
+        <svg id="pp-field-svg" viewBox="0 0 300 260" style="width:100%;cursor:crosshair;display:block;border-radius:6px;overflow:hidden" onclick="ppMarkLocation(event)" ontouchend="ppMarkLocation(event)">
+          <rect width="300" height="260" fill="#0a150a"/>
+          <path d="M 150,245 L 18,245 Q 18,20 150,20 Q 282,20 282,245 Z" fill="#0e2410"/>
+          <ellipse cx="150" cy="185" rx="68" ry="58" fill="#1e1008"/>
+          <path d="M 22,245 Q 150,24 278,245" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="6"/>
+          <line x1="150" y1="245" x2="22" y2="30" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>
+          <line x1="150" y1="245" x2="278" y2="30" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>
+          <polygon points="150,165 110,205 150,245 190,205" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+          <circle cx="150" cy="200" r="8" fill="#2a1a08" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+          <rect x="144" y="159" width="12" height="12" fill="white" opacity=".9" transform="rotate(45,150,165)"/>
+          <rect x="104" y="199" width="12" height="12" fill="white" opacity=".9" transform="rotate(45,110,205)"/>
+          <rect x="184" y="199" width="12" height="12" fill="white" opacity=".9" transform="rotate(45,190,205)"/>
+          <polygon points="150,245 143,238 143,230 157,230 157,238" fill="white" opacity=".9"/>
+          <text x="150" y="70"  text-anchor="middle" fill="rgba(255,255,255,.18)" font-size="9" font-family="sans-serif">CF</text>
+          <text x="60"  y="100" text-anchor="middle" fill="rgba(255,255,255,.18)" font-size="9" font-family="sans-serif">LF</text>
+          <text x="240" y="100" text-anchor="middle" fill="rgba(255,255,255,.18)" font-size="9" font-family="sans-serif">RF</text>
+          <text x="112" y="190" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">SS</text>
+          <text x="188" y="190" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">2B</text>
+          <text x="88"  y="218" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">3B</text>
+          <text x="213" y="218" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">1B</text>
+          <circle id="pp-loc-dot"   cx="-30" cy="-30" r="9"  fill="var(--accent)" opacity=".9" stroke="white" stroke-width="2"/>
+          <circle id="pp-loc-pulse" cx="-30" cy="-30" r="16" fill="none" stroke="var(--accent)" stroke-width="1.5" opacity=".4"/>
+        </svg>
+      </div>
     </div>
     <button class="pp-done-btn" onclick="ppDone()">Done ✓</button>
   </div>
@@ -4333,11 +4353,6 @@ function liveAB(label, cls) {
 // ── Post-play sheet ───────────────────────────────────────────
 let _ppEntry = null;
 
-const PP_ZONES = [
-  'Left Field','Center Field','Right Field',
-  'Left Side / SS','Up the Middle','Right Side / 2B',
-  '3rd Base Side','Short IF / Middle','1st Base Side'
-];
 
 const BATTER_REACHED = new Set(['1B','2B','3B','ROE','FC','CI','BB','HBP','IBB']);
 
@@ -4382,46 +4397,55 @@ function _showPostPlay(entry, label) {
     } else { errSec.style.display = 'none'; }
   } else { errSec.style.display = 'none'; }
 
-  // Score section — runners currently on 2B/3B (not forced-scored) can be scored
-  const scoreSec  = document.getElementById('pp-score-section');
-  const scoreBtns = document.getElementById('pp-score-btns');
-  scoreBtns.innerHTML = '';
-  if (batterReached) {
-    const scoreable = ['3B','2B'].filter(b => bases[b]);
-    if (scoreable.length) {
-      scoreable.forEach(b => {
-        const pid = bases[b];
-        const btn = document.createElement('button');
-        btn.className = 'pp-score-btn';
-        btn.innerHTML = `<span style="font-weight:900">${_ppFirstName(pid)}</span><span style="color:var(--ok);font-size:.7rem">on ${b} &nbsp;→&nbsp; Scores ✓</span>`;
-        btn.onclick = () => _ppScoreRunner(pid, b, btn);
-        scoreBtns.appendChild(btn);
-      });
-      scoreSec.style.display = '';
-    } else { scoreSec.style.display = 'none'; }
-  } else { scoreSec.style.display = 'none'; }
-
-  // Zone section — batted balls only
-  const zoneSec  = document.getElementById('pp-zone-section');
-  const zoneGrid = document.getElementById('pp-zone-grid');
+  // Zone section — batted balls only; reset dot each time
+  const zoneSec = document.getElementById('pp-zone-section');
   if (BALL_IN_PLAY.has(label)) {
-    zoneGrid.innerHTML = PP_ZONES.map(z =>
-      `<button class="pp-zone-btn" data-zone="${z}" onclick="ppSelectZone(this,'${z}')">${z}</button>`
-    ).join('');
+    document.getElementById('pp-loc-dot').setAttribute('cx', -30);
+    document.getElementById('pp-loc-dot').setAttribute('cy', -30);
+    document.getElementById('pp-loc-pulse').setAttribute('cx', -30);
+    document.getElementById('pp-loc-pulse').setAttribute('cy', -30);
+    document.getElementById('pp-zone-lbl').textContent = '';
     zoneSec.style.display = '';
   } else { zoneSec.style.display = 'none'; }
 
   // Only open sheet if at least one section is visible
-  const hasContent = errSec.style.display !== 'none' ||
-                     scoreSec.style.display !== 'none' ||
-                     zoneSec.style.display !== 'none';
+  const hasContent = errSec.style.display !== 'none' || zoneSec.style.display !== 'none';
   if (hasContent) document.getElementById('postplay-sheet').classList.add('open');
 }
 
-function ppSelectZone(btn, zone) {
-  document.querySelectorAll('#pp-zone-grid .pp-zone-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  if (_ppEntry) _ppEntry.hitZone = zone;
+function ppMarkLocation(e) {
+  if (e.cancelable) e.preventDefault();
+  const src  = e.changedTouches ? e.changedTouches[0] : e;
+  const svg  = document.getElementById('pp-field-svg');
+  const rect = svg.getBoundingClientRect();
+  const vb   = svg.viewBox.baseVal;
+  const x    = ((src.clientX - rect.left) / rect.width)  * vb.width;
+  const y    = ((src.clientY - rect.top)  / rect.height) * vb.height;
+  const px   = +(x / vb.width).toFixed(3);
+  const py   = +(y / vb.height).toFixed(3);
+  document.getElementById('pp-loc-dot').setAttribute('cx', x);
+  document.getElementById('pp-loc-dot').setAttribute('cy', y);
+  document.getElementById('pp-loc-pulse').setAttribute('cx', x);
+  document.getElementById('pp-loc-pulse').setAttribute('cy', y);
+  const zone = _hitZoneLabel(px, py);
+  document.getElementById('pp-zone-lbl').textContent = zone;
+  if (_ppEntry) { _ppEntry.hitZone = zone; _ppEntry.hitX = px; _ppEntry.hitY = py; }
+}
+
+function _hitZoneLabel(px, py) {
+  if (py < 0.42) {
+    if (px < 0.38) return 'Left Field';
+    if (px > 0.62) return 'Right Field';
+    return 'Center Field';
+  }
+  if (py < 0.72) {
+    if (px < 0.38) return 'Left Side / SS';
+    if (px > 0.62) return 'Right Side / 2B';
+    return 'Up the Middle';
+  }
+  if (px < 0.38) return '3rd Base Side';
+  if (px > 0.62) return '1st Base Side';
+  return 'Short IF / Middle';
 }
 
 function _ppAdvanceOnError(pid, fromBase, toBase, btn) {
@@ -4446,19 +4470,6 @@ function _ppAdvanceOnError(pid, fromBase, toBase, btn) {
   }
 }
 
-function _ppScoreRunner(pid, fromBase, btn) {
-  const bases = gdLiveState.bases;
-  if (!bases[fromBase] || bases[fromBase] !== pid) return;
-  _liveBaseLog();
-  bases[fromBase] = null;
-  gdLiveState.usScore++;
-  _liveStat(pid, 'r');
-  renderLiveInning();
-  renderLiveBases();
-  btn.disabled = true;
-  btn.style.opacity = '.45';
-  btn.querySelector('span:last-child').textContent = `Scored ✓`;
-}
 
 function ppDone() {
   document.getElementById('postplay-sheet').classList.remove('open');
