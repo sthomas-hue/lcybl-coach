@@ -358,7 +358,17 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .spec-order-badge.ab{background:var(--accent);color:#fff}
 .spec-order-badge.od{background:var(--surface2);color:var(--gold)}
 .spec-order-badge.ih{background:var(--surface2);color:var(--muted)}
-.spec-log{flex:1;overflow-y:auto;padding:8px 14px}
+.spec-log{flex:1;overflow-y:auto;padding:4px 0}
+.spec-pbp-row{display:flex;align-items:flex-start;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);font-size:.74rem}
+.spec-pbp-row:last-child{border-bottom:none}
+.spec-pbp-row.runner{background:rgba(255,255,255,.02)}
+.spec-pbp-half{font-size:.48rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);white-space:nowrap;min-width:42px;padding-top:2px}
+.spec-pbp-body{display:flex;flex-wrap:wrap;align-items:center;gap:4px;flex:1}
+.spec-pbp-icon{font-size:.72rem;flex-shrink:0}
+.spec-pbp-name{font-weight:800;color:var(--text)}
+.spec-pbp-result{font-weight:900}
+.spec-pbp-detail{font-size:.62rem;color:var(--muted);font-style:italic}
+.spec-pbp-divider{padding:5px 14px;font-size:.52rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface)}
 .spec-log-entry{padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:8px;font-size:.74rem}
 .spec-log-entry:last-child{border-bottom:none}
 .spec-log-half{font-size:.52rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);white-space:nowrap;min-width:38px}
@@ -4556,7 +4566,7 @@ function liveAB(label, cls) {
   const entry = {
     type:'ab', slotIdx:idx, playerId:slot?.id, result:label, cls,
     inning:gdLiveState.inning, half:gdLiveState.topBottom, ts:Date.now(),
-    prevBases:{...bases}, prevScore:gdLiveState.usScore
+    prevBases:{...bases}, prevScore:gdLiveState.usScore, prevOuts:gdLiveState.outs
   };
   (gdLiveState.log = gdLiveState.log||[]).push(entry);
 
@@ -4598,7 +4608,13 @@ function liveAB(label, cls) {
   } else if (label === 'SF') {
     if (bases['3B']) { _liveStat(bases['3B'], 'r'); _liveStat(batterId, 'rbi'); gdLiveState.usScore++; bases['3B'] = null; }
   }
-  // Outs (K, FO, GO, LO, DP, Sac, E): batter doesn't reach — no base change
+  // Auto-out: batter is retired — increment out count
+  const _autoOut1 = new Set(['K','K-L','FO','GO','LO','Sac','E']);
+  if (_autoOut1.has(label)) {
+    gdLiveState.outs = Math.min(3, gdLiveState.outs + 1);
+  } else if (label === 'DP') {
+    gdLiveState.outs = Math.min(3, gdLiveState.outs + 2);
+  }
 
   gdLiveState.batterIdx = (idx + 1) % (gdLineup.length || 1);
 
@@ -4607,6 +4623,9 @@ function liveAB(label, cls) {
   Object.keys(gdLiveState.bases).forEach(b => {
     bo[b] = gdLiveState.bases[b] ? batterId : null;
   });
+
+  // Trigger end of half if 3 outs reached
+  if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); }
 
   renderLiveAB();
   renderLiveLineup();
@@ -4739,6 +4758,7 @@ function _ppAdvanceOnError(pid, fromBase, toBase, btn) {
 
 
 function ppDone() {
+  _publishLiveGame();
   document.getElementById('postplay-sheet').classList.remove('open');
   _ppEntry = null;
 }
@@ -4810,6 +4830,7 @@ function liveUndo() {
     gdLiveState.batterIdx = entry.slotIdx;
     gdLiveState.bases     = entry.prevBases || {'1B':null,'2B':null,'3B':null};
     if (entry.prevScore !== undefined) gdLiveState.usScore = entry.prevScore;
+    if (entry.prevOuts  !== undefined) gdLiveState.outs    = entry.prevOuts;
     const hasLater = log.some(e => e.type==='ab' && e.slotIdx===entry.slotIdx);
     if (!hasLater) {
       delete gdLiveState.lastResult[entry.slotIdx];
@@ -4829,6 +4850,13 @@ function liveUndo() {
     renderLiveBases();
   }
   else { renderLiveAB(); }
+}
+
+function _liveFmtName(p) {
+  if (!p) return '?';
+  const parts = (p.name||'').trim().split(/\s+/);
+  const first = parts[0]||''; const last = parts.slice(1).join(' ');
+  return last ? `${first[0].toUpperCase()}. ${last} #${p.jersey||'?'}` : `${first} #${p.jersey||'?'}`;
 }
 
 function _liveBaseLog(extraFields) {
@@ -4887,6 +4915,12 @@ function liveRunnerAdvance(fromBase, reason) {
   bo[toBase]   = bo[fromBase] || null;
   bo[fromBase] = null;
   if (reason === 'SB') _liveStat(pid, 'sb');
+  const _p_adv = S.players.find(x=>x.id===pid);
+  const _rsn   = reason && reason!=='ADV' ? ` (${reason})` : '';
+  (gdLiveState.log=gdLiveState.log||[]).push({
+    type:'runner_event', inning:gdLiveState.inning, half:gdLiveState.topBottom, ts:Date.now(),
+    name:_liveFmtName(_p_adv), result:`${fromBase} → ${toBase}${_rsn}`, cls:'b-yellow', detail:''
+  });
   closeRunnerModal();
   renderLiveBases();
   gdSaveState();
@@ -4906,6 +4940,12 @@ function liveRunnerScore(fromBase, reason) {
   if (bo[fromBase]) _liveStat(bo[fromBase], 'rbi');
   bo[fromBase] = null;
   if (reason === 'SB') _liveStat(pid, 'sb');
+  const _p_sc = S.players.find(x=>x.id===pid);
+  const _rsn_sc = reason && reason!=='ADV' ? ` (${reason})` : '';
+  (gdLiveState.log=gdLiveState.log||[]).push({
+    type:'runner_event', inning:gdLiveState.inning, half:gdLiveState.topBottom, ts:Date.now(),
+    name:_liveFmtName(_p_sc), result:`Scores${_rsn_sc} ⬛`, cls:'b-green', detail:''
+  });
   closeRunnerModal();
   renderLiveInning();
   renderLiveBases();
@@ -4922,10 +4962,17 @@ function liveRunnerOut(fromBase, reason) {
   gdLiveState.outs = Math.min(3, gdLiveState.outs + 1);
   if (reason === 'CS')  _liveStat(pid, 'cs');
   if (reason === 'PIK') _liveStat(pid, 'pik');
+  const _p_out = S.players.find(x=>x.id===pid);
+  const _rsn_out = reason||'OUT';
+  (gdLiveState.log=gdLiveState.log||[]).push({
+    type:'runner_event', inning:gdLiveState.inning, half:gdLiveState.topBottom, ts:Date.now(),
+    name:_liveFmtName(_p_out), result:`Out — ${_rsn_out}`, cls:'b-red', detail:''
+  });
   closeRunnerModal();
   if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); }
   renderLiveInning();
   renderLiveBases();
+  gdSaveState();
   _publishLiveGame();
 }
 
@@ -5714,13 +5761,18 @@ function _fmt2(n) { return (n!=null&&!isNaN(n)) ? (+n).toFixed(2) : '—'; }
 function _fmtLogEntry(entry) {
   const ord = ['1st','2nd','3rd','4th','5th','6th','7th'];
   const inn = (ord[(entry.inning||1)-1]||(entry.inning||1)+'th') + (entry.half==='top'?' ▲':' ▼');
-  if (entry.type==='half_end') return { half:inn, desc:'End of inning', result:'', cls:'' };
+  if (entry.type==='half_end') return { half:inn, name:'', result:'End of half', cls:'b-gray', type:'half_end' };
+  if (entry.type==='runner_event') {
+    return { half:inn, name:entry.name||'', result:entry.result||'', cls:entry.cls||'b-gray', type:'runner_event', detail:entry.detail||'' };
+  }
   if (entry.type==='ab') {
     const slot = gdLineup && gdLineup[entry.slotIdx];
     const sub  = slot && gdLiveState.subs && gdLiveState.subs[slot.id];
     const p    = sub ? S.players.find(x=>x.id===sub) : slot;
     const clsMap = {hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'};
-    return { half:inn, desc:(p?p.name.split(' ')[0]:'?'), result:entry.result, cls:clsMap[entry.cls]||'b-gray' };
+    const name = _liveFmtName(p);
+    const detail = entry.hitZone||'';
+    return { half:inn, name, result:entry.result, cls:clsMap[entry.cls]||'b-gray', type:'ab', detail };
   }
   return null;
 }
@@ -5857,6 +5909,53 @@ function publishTeamNow() {
   });
 }
 
+// ── Spectator runner animation ────────────────────────────────
+let _specPrevBases = {'1B':null,'2B':null,'3B':null};
+
+function _animateSpecRunners(oldBases, newBases, teamColor) {
+  const svg = document.getElementById('spec-diamond-svg');
+  if (!svg) return;
+  const POS = {'1B':{x:68,y:36},'2B':{x:40,y:10},'3B':{x:12,y:36},'HOME':{x:40,y:66}};
+
+  // Index old bases by jersey
+  const prevByJersey = {};
+  Object.keys(oldBases).forEach(b => { if (oldBases[b]?.jersey) prevByJersey[oldBases[b].jersey]=b; });
+
+  // Index new bases by jersey
+  const newByJersey = {};
+  Object.keys(newBases).forEach(b => { if (newBases[b]?.jersey) newByJersey[newBases[b].jersey]=b; });
+
+  function makeCircle(fx,fy,color) {
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',fx); c.setAttribute('cy',fy); c.setAttribute('r','5.5');
+    c.setAttribute('fill',color); c.setAttribute('stroke','#fff'); c.setAttribute('stroke-width','1');
+    c.setAttribute('opacity','0.95'); svg.appendChild(c); return c;
+  }
+
+  function runAnim(circle,fx,fy,tx,ty,dur,fadeOut) {
+    const t0=performance.now();
+    (function step(now){
+      const t=Math.min(1,(now-t0)/dur);
+      const e=t<0.5?2*t*t:-1+(4-2*t)*t;
+      circle.setAttribute('cx',fx+(tx-fx)*e);
+      circle.setAttribute('cy',fy+(ty-fy)*e);
+      if(fadeOut) circle.setAttribute('opacity',(1-e*0.8).toFixed(2));
+      if(t<1) requestAnimationFrame(step);
+      else { try{svg.removeChild(circle);}catch(e2){} }
+    })(t0);
+  }
+
+  // Animate runners who changed base
+  Object.keys(prevByJersey).forEach(jersey => {
+    const fromBase = prevByJersey[jersey];
+    const toBase   = newByJersey[jersey] || 'HOME';
+    if (toBase === fromBase) return;
+    const from = POS[fromBase]; const to = POS[toBase]; if (!from||!to) return;
+    const scored = toBase==='HOME';
+    runAnim(makeCircle(from.x,from.y,teamColor), from.x,from.y,to.x,to.y, 650, scored);
+  });
+}
+
 // ── Spectator mode ────────────────────────────────────────────
 function initSpectatorMode(code) {
   document.getElementById('spectator-screen').classList.add('active');
@@ -5883,9 +5982,11 @@ function renderSpectatorView(data) {
     (data.topBottom==='top'?'▲ ':'▼ ') + (ord[(data.inning||1)-1]||(data.inning||1)+'th');
   [0,1,2].forEach(i => document.getElementById('spec-out'+i).classList.toggle('on', i<(data.outs||0)));
 
-  // Bases diamond
+  // Bases diamond — animate runners before updating polygons
   const color = data.teamColor||'var(--accent)';
   const bases = data.bases||{};
+  _animateSpecRunners(_specPrevBases, bases, color);
+  _specPrevBases = JSON.parse(JSON.stringify(bases));
   ['1B','2B','3B'].forEach(b => {
     const info = bases[b];
     const poly = document.getElementById('sd-'+b);
@@ -5958,15 +6059,37 @@ function renderSpectatorView(data) {
     orderWrap.style.display = 'none';
   }
 
-  // Play log
+  // Rich play-by-play log
   const log = data.log||[];
   document.getElementById('spec-log').innerHTML = log.length
     ? log.map(e => {
-        if (!e.result) return `<div class="spec-log-entry"><span class="spec-log-half">${e.half||''}</span><span class="spec-log-desc" style="color:var(--muted);font-style:italic">${e.desc}</span></div>`;
-        const c = e.cls==='b-green'?'#4caf50':e.cls==='b-yellow'?'var(--gold)':e.cls==='b-red'?'var(--accent)':'var(--muted)';
-        return `<div class="spec-log-entry"><span class="spec-log-half">${e.half||''}</span><span class="spec-log-desc">${e.desc} <span style="color:${c};font-weight:900">${e.result}</span></span></div>`;
+        const cc = e.cls==='b-green'?'#4caf50':e.cls==='b-yellow'?'var(--gold)':e.cls==='b-red'?'var(--accent)':'var(--muted)';
+        if (e.type==='half_end') {
+          return `<div class="spec-pbp-divider"><span>${e.half||''} — End of half</span></div>`;
+        }
+        if (e.type==='runner_event') {
+          return `<div class="spec-pbp-row runner">
+            <div class="spec-pbp-half">${e.half||''}</div>
+            <div class="spec-pbp-body">
+              <span class="spec-pbp-name">${e.name||''}</span>
+              <span class="spec-pbp-result" style="color:${cc}">${e.result||''}</span>
+            </div>
+          </div>`;
+        }
+        // AB entry
+        const icon = e.cls==='b-green'?'⚾':e.cls==='b-yellow'?'🚶':e.cls==='b-red'?'✗':'·';
+        const detailHtml = e.detail ? `<span class="spec-pbp-detail">${e.detail}</span>` : '';
+        return `<div class="spec-pbp-row">
+          <div class="spec-pbp-half">${e.half||''}</div>
+          <div class="spec-pbp-body">
+            <span class="spec-pbp-icon">${icon}</span>
+            <span class="spec-pbp-name">${e.name||e.desc||''}</span>
+            <span class="spec-pbp-result" style="color:${cc}">${e.result||''}</span>
+            ${detailHtml}
+          </div>
+        </div>`;
       }).join('')
-    : '<div style="color:var(--muted);font-size:.75rem;padding:10px 0">No plays logged yet.</div>';
+    : '<div style="color:var(--muted);font-size:.75rem;padding:10px 0;text-align:center">No plays yet</div>';
 }
 
 // ── Team page mode ────────────────────────────────────────────
