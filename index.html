@@ -461,6 +461,60 @@ main{padding:16px;max-width:860px;margin:0 auto}
   </div>
 </div>
 
+<!-- HIT LOCATION MODAL -->
+<div class="overlay" id="hit-location-modal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-hdr">
+      <h2 id="hit-loc-title">Where did it go?</h2>
+      <button class="x-btn" onclick="liveSkipHitLocation()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:10px 14px">
+      <p style="font-size:.7rem;color:var(--muted);margin-bottom:10px;text-align:center">Tap the field to mark the hit location</p>
+      <div style="position:relative;user-select:none;touch-action:none">
+        <svg id="hit-loc-svg" viewBox="0 0 300 260" style="width:100%;cursor:crosshair;display:block;border-radius:6px;overflow:hidden" onclick="liveMarkHitLocation(event)">
+          <!-- Sky/warning track -->
+          <rect width="300" height="260" fill="#0a150a"/>
+          <!-- Outfield grass -->
+          <path d="M 150,245 L 18,245 Q 18,20 150,20 Q 282,20 282,245 Z" fill="#0e2410"/>
+          <!-- Infield dirt -->
+          <ellipse cx="150" cy="185" rx="68" ry="58" fill="#1e1008"/>
+          <!-- Warning track arc -->
+          <path d="M 22,245 Q 150,24 278,245" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="6"/>
+          <!-- Foul lines -->
+          <line x1="150" y1="245" x2="22" y2="30" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>
+          <line x1="150" y1="245" x2="278" y2="30" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>
+          <!-- Base paths -->
+          <polygon points="150,165 110,205 150,245 190,205" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+          <!-- Pitcher mound -->
+          <circle cx="150" cy="200" r="8" fill="#2a1a08" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+          <!-- Bases -->
+          <rect x="144" y="159" width="12" height="12" fill="white" opacity=".9" transform="rotate(45,150,165)"/>
+          <rect x="104" y="199" width="12" height="12" fill="white" opacity=".9" transform="rotate(45,110,205)"/>
+          <rect x="184" y="199" width="12" height="12" fill="white" opacity=".9" transform="rotate(45,190,205)"/>
+          <!-- Home plate -->
+          <polygon points="150,245 143,238 143,230 157,230 157,238" fill="white" opacity=".9"/>
+          <!-- Zone labels -->
+          <text x="150" y="70"  text-anchor="middle" fill="rgba(255,255,255,.18)" font-size="9" font-family="sans-serif">CF</text>
+          <text x="60"  y="100" text-anchor="middle" fill="rgba(255,255,255,.18)" font-size="9" font-family="sans-serif">LF</text>
+          <text x="240" y="100" text-anchor="middle" fill="rgba(255,255,255,.18)" font-size="9" font-family="sans-serif">RF</text>
+          <text x="112" y="190" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">SS</text>
+          <text x="188" y="190" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">2B</text>
+          <text x="88"  y="218" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">3B</text>
+          <text x="213" y="218" text-anchor="middle" fill="rgba(255,255,255,.15)" font-size="7" font-family="sans-serif">1B</text>
+          <!-- Hit dot (hidden until tapped) -->
+          <circle id="hit-loc-dot" cx="-30" cy="-30" r="9" fill="var(--accent)" opacity=".9" stroke="white" stroke-width="2"/>
+          <circle id="hit-loc-pulse" cx="-30" cy="-30" r="16" fill="none" stroke="var(--accent)" stroke-width="1.5" opacity=".4"/>
+        </svg>
+      </div>
+      <div id="hit-loc-zone" style="text-align:center;font-size:.72rem;color:var(--gold);font-weight:800;margin-top:8px;min-height:18px"></div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-outline" onclick="liveSkipHitLocation()">Skip</button>
+      <button class="btn btn-primary" id="hit-loc-save" onclick="liveConfirmHitLocation()" disabled style="opacity:.4">Save Location</button>
+    </div>
+  </div>
+</div>
+
 <!-- GAME MODAL -->
 <div class="overlay" id="game-modal">
   <div class="modal">
@@ -806,7 +860,10 @@ main{padding:16px;max-width:860px;margin:0 auto}
               <div class="live-out-dot" id="live-out1" onclick="liveOuts(1)" title="Out 2"></div>
               <div class="live-out-dot" id="live-out2" onclick="liveOuts(2)" title="Out 3"></div>
             </div>
-            <button class="live-half-btn" onclick="liveNextInning()">End Half ▶</button>
+            <div style="display:flex;gap:4px">
+              <button class="live-half-btn" onclick="liveUndo()" id="live-undo-half-btn" style="opacity:.5" title="Undo last action">↩</button>
+              <button class="live-half-btn" onclick="liveNextInning()">End Half ▶</button>
+            </div>
           </div>
           <div class="live-score-side">
             <div class="live-score-lbl" id="live-them-lbl">THEM</div>
@@ -3789,7 +3846,8 @@ function gdStartLive() {
   document.getElementById('live-us-lbl').textContent   = (S.name || 'US').toUpperCase().slice(0,8);
   document.getElementById('live-them-lbl').textContent = g ? (g.opponent||'THEM').toUpperCase().slice(0,8) : 'THEM';
   gdLiveState = { usScore:0, themScore:0, inning:1, topBottom:'top', outs:0,
-                  batterIdx:0, pitchCounts:{}, subs:{}, fieldSubs:{}, lastResult:{}, log:[] };
+                  batterIdx:0, pitchCounts:{}, subs:{}, fieldSubs:{}, lastResult:{}, log:[],
+                  pulledPitchers:[] };
   _liveTab = 'lineup';
   renderLiveMode();
   gdGoStep(5);
@@ -3810,6 +3868,8 @@ function renderLiveInning() {
   document.getElementById('live-us-score').textContent   = gdLiveState.usScore;
   document.getElementById('live-them-score').textContent = gdLiveState.themScore;
   [0,1,2].forEach(i => document.getElementById('live-out'+i).classList.toggle('on', i < gdLiveState.outs));
+  const undoBtn = document.getElementById('live-undo-half-btn');
+  if (undoBtn) undoBtn.style.opacity = (gdLiveState.log||[]).length ? '1' : '.3';
 }
 
 let _liveShowMore = false;
@@ -3983,6 +4043,10 @@ function liveOuts(clicked) {
 }
 
 function liveNextHalf() {
+  // Log so undo can reverse it
+  (gdLiveState.log = gdLiveState.log||[]).push({
+    type:'half_end', prevInning:gdLiveState.inning, prevHalf:gdLiveState.topBottom, prevOuts:gdLiveState.outs
+  });
   if (gdLiveState.topBottom === 'top') { gdLiveState.topBottom = 'bot'; }
   else { gdLiveState.topBottom = 'top'; gdLiveState.inning = Math.min(gdLiveState.inning + 1, 7); }
   gdLiveState.outs = 0;
@@ -3997,18 +4061,89 @@ function liveAddPitch(n) {
   renderLivePitcher();
 }
 
+const BALL_IN_PLAY = new Set(['1B','2B','3B','HR','GO','FO','LO','DP','FC','ROE','E','Sac','SF','CI']);
+
 function liveAB(label, cls) {
   const idx    = gdLiveState.batterIdx;
   const slot   = gdLineup[idx];
   const clsMap = { hit:'b-green', walk:'b-yellow', out:'b-red', neutral:'b-gray' };
   gdLiveState.lastResult[idx] = { label, cls: clsMap[cls]||'b-gray' };
-  (gdLiveState.log = gdLiveState.log||[]).push({
+  const entry = {
     type:'ab', slotIdx:idx, playerId:slot?.id, result:label, cls,
     inning:gdLiveState.inning, half:gdLiveState.topBottom, ts:Date.now()
-  });
+  };
+  (gdLiveState.log = gdLiveState.log||[]).push(entry);
   gdLiveState.batterIdx = (idx + 1) % (gdLineup.length || 1);
   renderLiveAB();
   renderLiveLineup();
+  // Prompt hit location for balls in play
+  if (BALL_IN_PLAY.has(label)) promptHitLocation(entry, label);
+}
+
+let _hitLocEntry = null, _hitLocX = null, _hitLocY = null;
+
+function promptHitLocation(entry, label) {
+  _hitLocEntry = entry;
+  _hitLocX = null; _hitLocY = null;
+  document.getElementById('hit-loc-title').textContent = label + ' — Where did it go?';
+  document.getElementById('hit-loc-dot').setAttribute('cx', -30);
+  document.getElementById('hit-loc-dot').setAttribute('cy', -30);
+  document.getElementById('hit-loc-pulse').setAttribute('cx', -30);
+  document.getElementById('hit-loc-pulse').setAttribute('cy', -30);
+  document.getElementById('hit-loc-zone').textContent = '';
+  document.getElementById('hit-loc-save').disabled = true;
+  document.getElementById('hit-loc-save').style.opacity = '.4';
+  document.getElementById('hit-location-modal').classList.add('open');
+}
+
+function liveMarkHitLocation(e) {
+  const svg  = document.getElementById('hit-loc-svg');
+  const rect = svg.getBoundingClientRect();
+  const vb   = svg.viewBox.baseVal;
+  const x    = ((e.clientX - rect.left) / rect.width)  * vb.width;
+  const y    = ((e.clientY - rect.top)  / rect.height) * vb.height;
+  _hitLocX = +(x / vb.width).toFixed(3);
+  _hitLocY = +(y / vb.height).toFixed(3);
+  document.getElementById('hit-loc-dot').setAttribute('cx', x);
+  document.getElementById('hit-loc-dot').setAttribute('cy', y);
+  document.getElementById('hit-loc-pulse').setAttribute('cx', x);
+  document.getElementById('hit-loc-pulse').setAttribute('cy', y);
+  // Determine zone label
+  const zone = _hitZoneLabel(_hitLocX, _hitLocY);
+  document.getElementById('hit-loc-zone').textContent = zone;
+  document.getElementById('hit-loc-save').disabled = false;
+  document.getElementById('hit-loc-save').style.opacity = '1';
+}
+
+function _hitZoneLabel(px, py) {
+  // py: 0=top(outfield), 1=bottom(home). px: 0=left, 1=right
+  if (py < 0.42) {
+    if (px < 0.38) return 'Left Field';
+    if (px > 0.62) return 'Right Field';
+    return 'Center Field';
+  }
+  if (py < 0.72) {
+    if (px < 0.38) return 'Left Side / SS';
+    if (px > 0.62) return 'Right Side / 2B';
+    return 'Up the Middle';
+  }
+  if (px < 0.38) return '3rd Base Side';
+  if (px > 0.62) return '1st Base Side';
+  return 'Short / Middle IF';
+}
+
+function liveConfirmHitLocation() {
+  if (_hitLocEntry && _hitLocX !== null) {
+    _hitLocEntry.hitX = _hitLocX;
+    _hitLocEntry.hitY = _hitLocY;
+    _hitLocEntry.hitZone = _hitZoneLabel(_hitLocX, _hitLocY);
+  }
+  liveSkipHitLocation();
+}
+
+function liveSkipHitLocation() {
+  document.getElementById('hit-location-modal').classList.remove('open');
+  _hitLocEntry = null;
 }
 
 function liveLogField(result) {
@@ -4023,22 +4158,28 @@ function liveLogField(result) {
 function liveUndo() {
   const log = gdLiveState.log||[];
   if (!log.length) return;
-  // Find and remove the last AB entry (skip past field events at the tail)
-  let i = log.length - 1;
-  while (i >= 0 && log[i].type !== 'ab') i--;
-  if (i < 0) { log.pop(); return; } // only field events — just pop last
-  const entry = log.splice(i, 1)[0];
-  // Go back to that batter
-  gdLiveState.batterIdx = entry.slotIdx;
-  // Clear last result for that slot only if no later AB for same slot exists in log
-  const hasLater = log.some(e => e.type==='ab' && e.slotIdx===entry.slotIdx);
-  if (!hasLater) delete gdLiveState.lastResult[entry.slotIdx];
-  else {
-    const last = [...log].reverse().find(e => e.type==='ab' && e.slotIdx===entry.slotIdx);
-    if (last) { const clsMap={hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'}; gdLiveState.lastResult[entry.slotIdx]={label:last.result,cls:clsMap[last.cls]||'b-gray'}; }
+  const entry = log.pop(); // always undo the last event regardless of type
+
+  if (entry.type === 'half_end') {
+    // Reverse the inning advance — put outs back at where they were (2 before 3rd out)
+    gdLiveState.inning     = entry.prevInning;
+    gdLiveState.topBottom  = entry.prevHalf;
+    gdLiveState.outs       = Math.max(0, entry.prevOuts); // restore prior out count
+    renderLiveInning();
+  } else if (entry.type === 'ab') {
+    gdLiveState.batterIdx = entry.slotIdx;
+    const hasLater = log.some(e => e.type==='ab' && e.slotIdx===entry.slotIdx);
+    if (!hasLater) {
+      delete gdLiveState.lastResult[entry.slotIdx];
+    } else {
+      const last = [...log].reverse().find(e => e.type==='ab' && e.slotIdx===entry.slotIdx);
+      if (last) { const m={hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'}; gdLiveState.lastResult[entry.slotIdx]={label:last.result,cls:m[last.cls]||'b-gray'}; }
+    }
+    renderLiveAB();
+    renderLiveLineup();
   }
-  renderLiveAB();
-  renderLiveLineup();
+  // field events: just removed from log, re-render AB to update undo button state
+  else { renderLiveAB(); }
 }
 
 function openPlayLog() {
@@ -4065,10 +4206,10 @@ function openPlayLog() {
     </div>`;
   }).join('');
 
-  document.getElementById('confirm-modal-msg').innerHTML = `
+  document.getElementById('conf-msg').innerHTML = `
     <div style="font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;color:var(--muted)">Play Log — ${log.length} event${log.length===1?'':'s'}</div>
     ${rows||'<div style="color:var(--muted);font-size:.82rem;padding:12px 0">No plays recorded yet</div>'}`;
-  document.getElementById('confirm-modal-ok').style.display = 'none';
+  document.getElementById('conf-ok').style.display = 'none';
   openModal('confirm-modal');
 }
 
@@ -4082,7 +4223,7 @@ function liveDeleteLogEntry(idx) {
     if (!hasAny) delete gdLiveState.lastResult[entry.slotIdx];
   }
   closeModal('confirm-modal');
-  document.getElementById('confirm-modal-ok').style.display = '';
+  document.getElementById('conf-ok').style.display = '';
   renderLiveAB();
   renderLiveLineup();
 }
@@ -4102,11 +4243,11 @@ function liveEditLogEntry(idx) {
   const slot = gdLineup[entry.slotIdx];
   const subId = slot && gdLiveState.subs[slot.id];
   const p = subId ? S.players.find(x=>x.id===subId)||slot : slot;
-  document.getElementById('confirm-modal-msg').innerHTML = `
+  document.getElementById('conf-msg').innerHTML = `
     <div style="font-size:.82rem;font-weight:700;margin-bottom:12px">Edit result for <b>${p?.name||'?'}</b></div>
     <select id="edit-result-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:8px;border-radius:3px;font-size:.88rem">${opts}</select>`;
-  document.getElementById('confirm-modal-ok').style.display = '';
-  document.getElementById('confirm-modal-ok').onclick = () => {
+  document.getElementById('conf-ok').style.display = '';
+  document.getElementById('conf-ok').onclick = () => {
     const [newLabel, newCls] = document.getElementById('edit-result-sel').value.split('|');
     log[idx].result = newLabel; log[idx].cls = newCls;
     const clsMap = {hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'};
@@ -4154,8 +4295,8 @@ function liveSubLineupSlot(slotIdx) {
   const slot = gdLineup[slotIdx];
   const curSubId = gdLiveState.subs[slot.id];
   const curName  = curSubId ? (S.players.find(x=>x.id===curSubId)||slot).name : slot.name;
-  document.getElementById('confirm-modal-msg').innerHTML = `Sub into spot <b>${slotIdx+1} — ${curName}</b>:<br><br>${sel}`;
-  document.getElementById('confirm-modal-ok').onclick = () => {
+  document.getElementById('conf-msg').innerHTML = `Sub into spot <b>${slotIdx+1} — ${curName}</b>:<br><br>${sel}`;
+  document.getElementById('conf-ok').onclick = () => {
     gdLiveState.subs[slot.id] = document.getElementById('sub-target-sel').value;
     closeModal('confirm-modal');
     renderLiveLineup(); renderLiveAB();
@@ -4172,8 +4313,8 @@ function liveFieldSubModal(pos) {
   const cur     = gdFieldAssign[pos];
   const opts    = present.map(p=>`<option value="${p.id}" ${p.id===cur?'selected':''}>${p.name} (#${p.jersey||'?'}) · ${(p.positions||[]).slice(0,2).join('/')}</option>`).join('');
   const sel     = `<select id="sub-target-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:8px;border-radius:3px;font-size:.88rem">${opts}</select>`;
-  document.getElementById('confirm-modal-msg').innerHTML = `Assign <b>${pos}</b>:<br><br>${sel}`;
-  document.getElementById('confirm-modal-ok').onclick = () => {
+  document.getElementById('conf-msg').innerHTML = `Assign <b>${pos}</b>:<br><br>${sel}`;
+  document.getElementById('conf-ok').onclick = () => {
     const pid = document.getElementById('sub-target-sel').value;
     // Remove this player from any other position first
     Object.keys(gdFieldAssign).forEach(p => { if (gdFieldAssign[p] === pid) delete gdFieldAssign[p]; });
@@ -4188,13 +4329,15 @@ function liveFieldSubModal(pos) {
 function livePitcherSwap() {
   const currentPid = gdFieldAssign['P'];
   const gd = (() => { const g = S.games.find(x=>x.id===document.getElementById('gd-game-select').value); return g?g.date:today(); })();
+  const pulled  = gdLiveState.pulledPitchers||[];
   const present = S.players.filter(p => gdPresent.has(p.id) && p.positions && p.positions.includes('P'));
   const eligible = present.filter(p => {
     if (p.id === currentPid) return false;
+    if (pulled.includes(p.id)) return false;
     const st = pitchStatus(p, gd);
     return st.ok;
   });
-  const all = present.filter(p => p.id !== currentPid);
+  const all = present.filter(p => p.id !== currentPid && !pulled.includes(p.id));
   const list = (eligible.length ? eligible : all).map(p => {
     const thrown = gdLiveState.pitchCounts[p.id] || 0;
     const R = rules();
@@ -4209,19 +4352,24 @@ function livePitcherSwap() {
       <span style="font-size:.7rem;font-weight:700;color:var(--accent)">Select →</span>
     </div>`;
   }).join('');
-  document.getElementById('confirm-modal-msg').innerHTML =
+  document.getElementById('conf-msg').innerHTML =
     `<div style="font-size:.72rem;color:var(--muted);margin-bottom:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px">Choose New Pitcher</div>` +
     (list || '<div style="padding:10px 0;color:var(--muted);font-size:.82rem">No other pitchers available</div>');
-  document.getElementById('confirm-modal-ok').style.display = 'none';
+  document.getElementById('conf-ok').style.display = 'none';
   openModal('confirm-modal');
 }
 
 function livePitcherSwapTo(pid) {
+  // Track the outgoing pitcher as pulled — they can't return
+  const outgoing = gdFieldAssign['P'];
+  if (outgoing && outgoing !== pid) {
+    (gdLiveState.pulledPitchers = gdLiveState.pulledPitchers||[]).push(outgoing);
+  }
   // Remove new pitcher from any current field position
   Object.keys(gdFieldAssign).forEach(pos => { if (gdFieldAssign[pos] === pid) delete gdFieldAssign[pos]; });
   gdFieldAssign['P'] = pid;
   closeModal('confirm-modal');
-  document.getElementById('confirm-modal-ok').style.display = '';
+  document.getElementById('conf-ok').style.display = '';
   renderLivePitcher(); renderLiveField();
 }
 
