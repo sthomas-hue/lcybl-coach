@@ -915,6 +915,14 @@ main{padding:16px;max-width:860px;margin:0 auto}
         <select id="gm-loc"><option value="Home">Home</option><option value="Away">Away</option></select>
       </div>
       <div class="fg"><label>Field / Address (optional)</label><input id="gm-field" placeholder="Field name or address" /></div>
+      <div class="fg" id="gm-link-wrap">
+        <label>Opponent App Link (optional)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="gm-opp-code" placeholder="Share code (e.g. abc12xyz)" style="flex:1;font-family:monospace;font-size:.85rem" />
+          <button type="button" onclick="gmFindTeam()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:3px;cursor:pointer;font-size:.72rem;font-weight:800;white-space:nowrap;text-transform:uppercase;letter-spacing:.4px">🔍 Browse</button>
+        </div>
+        <div id="gm-opp-code-status" style="font-size:.68rem;color:var(--muted);margin-top:4px"></div>
+      </div>
     </div>
     <div class="modal-ftr">
       <button class="btn btn-outline" onclick="closeModal('game-modal')">Cancel</button>
@@ -1237,6 +1245,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
           </div>
           <div class="live-mid">
             <div class="live-inning-badge" id="live-inning-lbl">▲ 1st</div>
+            <div id="live-mode-badge" style="font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;padding:2px 8px;border-radius:2px;margin:3px auto 0;display:inline-block;background:rgba(0,165,80,.15);color:#00d466;border:1px solid rgba(0,165,80,.3)">BATTING</div>
             <div class="live-outs">
               <div class="live-out-dot" id="live-out0" onclick="liveOuts(0)" title="Out 1"></div>
               <div class="live-out-dot" id="live-out1" onclick="liveOuts(1)" title="Out 2"></div>
@@ -1277,7 +1286,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
           </div>
         </div>
 
-        <!-- At-bat card -->
+        <!-- At-bat card (batting mode) -->
         <div class="card" style="padding:14px;margin-bottom:8px" id="live-ab-card">
           <div style="font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">At Bat</div>
           <div class="live-batter-hdr" id="live-batter-hdr"></div>
@@ -1289,8 +1298,28 @@ main{padding:16px;max-width:860px;margin:0 auto}
           </div>
         </div>
 
-        <!-- Pitcher strip -->
-        <div class="card" style="padding:12px 14px;margin-bottom:8px" id="live-pitch-card"></div>
+        <!-- On Deck / In the Hole (batting mode) -->
+        <div id="live-nextup-strip" style="display:none;margin-bottom:8px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="card" style="padding:10px 12px;margin-bottom:0">
+              <div style="font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:4px">On Deck</div>
+              <div id="live-ondeck" style="font-size:.82rem;font-weight:800;color:var(--text)">—</div>
+            </div>
+            <div class="card" style="padding:10px 12px;margin-bottom:0">
+              <div style="font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:4px">In the Hole</div>
+              <div id="live-inhole" style="font-size:.82rem;font-weight:800;color:var(--text)">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pitcher strip (always shown, more prominent when fielding) -->
+        <div class="card" id="live-pitch-card" style="padding:12px 14px;margin-bottom:8px"></div>
+
+        <!-- Opponent batter card (fielding mode, only when opponent linked) -->
+        <div class="card" id="live-opp-batter-card" style="display:none;padding:12px 14px;margin-bottom:8px;border-color:rgba(52,152,219,.3)">
+          <div style="font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:#74b9ff;margin-bottom:8px">⚔ Opponent At Bat</div>
+          <div id="live-opp-batter-content" style="font-size:.85rem;color:var(--muted)">Loading…</div>
+        </div>
 
         <!-- Lineup / Defense tabs -->
         <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;margin-bottom:0">
@@ -2499,6 +2528,8 @@ function openGameModal(id) {
     el('gm-opp').value = g.opponent;
     el('gm-loc').value = g.location;
     el('gm-field').value = g.field||'';
+    el('gm-opp-code').value = g.opponentCode||'';
+    el('gm-opp-code-status').textContent = g.opponentCode ? '✓ Linked' : '';
     el('gm-delete-btn').style.display='inline-flex';
   } else {
     el('gm-title').textContent = 'Add Game';
@@ -2508,6 +2539,8 @@ function openGameModal(id) {
     el('gm-opp').value = '';
     el('gm-loc').value = 'Home';
     el('gm-field').value = '';
+    el('gm-opp-code').value = '';
+    el('gm-opp-code-status').textContent = '';
     el('gm-delete-btn').style.display='none';
   }
   openModal('game-modal');
@@ -2518,11 +2551,13 @@ function saveGame() {
   const date= document.getElementById('gm-date').value;
   const opp = document.getElementById('gm-opp').value.trim();
   if (!date||!opp) { alert('Enter date and opponent'); return; }
+  const oppCode = (document.getElementById('gm-opp-code').value||'').trim().toLowerCase();
   const obj = {
     date, opponent:opp,
     time: document.getElementById('gm-time').value,
     location: document.getElementById('gm-loc').value,
     field: document.getElementById('gm-field').value.trim(),
+    opponentCode: oppCode||null,
     result: null, gameStats:{}
   };
   if (id) {
@@ -2538,6 +2573,59 @@ function deleteGame() {
     S.games = S.games.filter(g=>g.id!==id);
     save(); closeModal('game-modal'); renderSchedule(); updateHeader();
   });
+}
+
+function gmFindTeam() {
+  if (!db) { alert('Not connected'); return; }
+  const statusEl = document.getElementById('gm-opp-code-status');
+  statusEl.textContent = 'Loading teams…';
+  db.collection('public_teams').limit(40).get().then(snap => {
+    if (snap.empty) { statusEl.textContent = 'No teams found in directory'; return; }
+    const myCode = S.shareCode||'';
+    const teams = [];
+    snap.forEach(doc => { if (doc.id !== myCode) teams.push({code:doc.id, ...doc.data()}); });
+    statusEl.textContent = '';
+    _openTeamBrowser(teams);
+  }).catch(() => { statusEl.textContent = 'Could not load teams'; });
+}
+
+function _openTeamBrowser(teams) {
+  let html = `<div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    <h2 style="font-size:.9rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px">Select Opponent</h2>
+    <button onclick="document.getElementById('team-browser-overlay').classList.remove('open')" style="background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1">✕</button>
+  </div>
+  <div style="padding:14px 18px">`;
+  if (!teams.length) {
+    html += `<p style="color:var(--muted);font-size:.85rem">No other teams found. Ask your opponent to publish their team page first, then enter their share code manually.</p>`;
+  } else {
+    html += teams.map(t => `
+      <div onclick="_gmSelectTeam('${t.code}','${(t.teamName||'').replace(/'/g,"\\'")}',this)"
+           style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;cursor:pointer;transition:background .15s"
+           onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <div>
+          <div style="font-size:.88rem;font-weight:800">${t.teamName||'Unknown'}</div>
+          <div style="font-size:.65rem;color:var(--muted);margin-top:2px">${t.division||''} ${t.season||''} · Code: <span style="font-family:monospace">${t.code}</span></div>
+        </div>
+        <div style="font-size:.75rem;font-weight:700;color:var(--ok)">${t.record?(t.record.w+'W '+t.record.l+'L'):''}</div>
+      </div>`).join('');
+  }
+  html += `</div>`;
+  let ov = document.getElementById('team-browser-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'team-browser-overlay';
+    ov.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1100;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `<div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);width:100%;max-width:480px;max-height:80vh;overflow-y:auto;box-shadow:0 12px 60px rgba(0,0,0,.7)">${html}</div>`;
+  ov.style.display = 'flex';
+}
+
+function _gmSelectTeam(code, name, el) {
+  document.getElementById('gm-opp-code').value = code;
+  if (document.getElementById('gm-opp').value.trim() === '') document.getElementById('gm-opp').value = name;
+  document.getElementById('gm-opp-code-status').textContent = `✓ Linked: ${name}`;
+  document.getElementById('team-browser-overlay').style.display = 'none';
 }
 
 // ============================================================
@@ -2791,6 +2879,8 @@ function gdRestoreState() {
         const g2 = S.games.find(x=>x.id===sel.value);
         document.getElementById('live-us-lbl').textContent   = (S.name||'US').toUpperCase().slice(0,8);
         document.getElementById('live-them-lbl').textContent = g2 ? (g2.opponent||'THEM').toUpperCase().slice(0,8) : 'THEM';
+        _oppLiveData = null;
+        _subscribeOpponent(g2?.opponentCode||null);
         renderGameCard();
         renderLiveMode();
       }
@@ -4267,9 +4357,16 @@ function gdStartLive() {
                   pulledPitchers:[], bases:{'1B':null,'2B':null,'3B':null}, stats:{},
                   basesOwner:{'1B':null,'2B':null,'3B':null}, isHome };
   _liveTab = 'lineup';
+  _oppLiveData = null;
+  _subscribeOpponent(g?.opponentCode||null);
   renderLiveMode();
   gdGoStep(5);
   _publishLiveGame();
+}
+
+function _gdWeAreBatting() {
+  if (!gdLiveState) return true;
+  return gdLiveState.isHome ? gdLiveState.topBottom === 'bot' : gdLiveState.topBottom === 'top';
 }
 
 function renderLiveMode() {
@@ -4279,6 +4376,69 @@ function renderLiveMode() {
   renderLivePitcher();
   renderLiveLineup();
   renderLiveField();
+  _updateLiveHalfMode();
+}
+
+function renderLiveNextUp() {
+  const idx = gdLiveState.batterIdx;
+  const mk = offset => {
+    if (!gdLineup.length) return '—';
+    const ni = (idx + offset) % gdLineup.length;
+    const slot = gdLineup[ni]; if (!slot) return '—';
+    const subId = gdLiveState.subs && gdLiveState.subs[slot.id];
+    const p = subId ? (S.players.find(x=>x.id===subId)||slot) : slot;
+    return `#${p.jersey||'?'} ${p.name}`;
+  };
+  const od = document.getElementById('live-ondeck');
+  const ih = document.getElementById('live-inhole');
+  if (od) od.textContent = mk(1);
+  if (ih) ih.textContent = mk(2);
+}
+
+function _updateLiveHalfMode() {
+  const batting = _gdWeAreBatting();
+  const abCard      = document.getElementById('live-ab-card');
+  const nextupStrip = document.getElementById('live-nextup-strip');
+  const pitchCard   = document.getElementById('live-pitch-card');
+  const modeBadge   = document.getElementById('live-mode-badge');
+
+  // Mode badge
+  if (modeBadge) {
+    if (batting) {
+      modeBadge.textContent = 'BATTING';
+      modeBadge.style.background = 'rgba(0,165,80,.15)';
+      modeBadge.style.color = '#00d466';
+      modeBadge.style.borderColor = 'rgba(0,165,80,.3)';
+    } else {
+      modeBadge.textContent = 'FIELDING';
+      modeBadge.style.background = 'rgba(52,152,219,.15)';
+      modeBadge.style.color = '#74b9ff';
+      modeBadge.style.borderColor = 'rgba(52,152,219,.3)';
+    }
+  }
+
+  // At-bat card: show only when batting
+  if (abCard) abCard.style.display = batting ? '' : 'none';
+
+  // On-deck strip: show only when batting
+  if (nextupStrip) {
+    nextupStrip.style.display = batting ? '' : 'none';
+    if (batting) renderLiveNextUp();
+  }
+
+  // Pitcher card: highlight when fielding
+  if (pitchCard) {
+    pitchCard.style.borderColor = batting ? 'var(--border)' : 'rgba(52,152,219,.4)';
+    pitchCard.style.background  = batting ? 'var(--surface)' : 'rgba(52,152,219,.04)';
+  }
+
+  // Auto-switch tab
+  if (batting) {
+    showLiveTab('lineup');
+  } else {
+    showLiveTab('field');
+    _renderOppBatter();
+  }
 }
 
 function renderLiveInning() {
@@ -4492,7 +4652,44 @@ function liveNextHalf() {
   _publishLiveGame();
 }
 
-function liveNextInning() { liveNextHalf(); renderLiveInning(); }
+function liveNextInning() { liveNextHalf(); renderLiveMode(); }
+
+let _oppUnsub = null;
+let _oppLiveData = null;
+
+function _renderOppBatter() {
+  const card = document.getElementById('live-opp-batter-card');
+  const content = document.getElementById('live-opp-batter-content');
+  if (!card || !content) return;
+  if (!_oppLiveData) { card.style.display = 'none'; return; }
+  const d = _oppLiveData;
+  card.style.display = '';
+  if (d.atBat) {
+    content.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:.92rem;font-weight:900;color:var(--text)">${d.atBat.fmtName||'—'}</div>
+          <div style="font-size:.65rem;color:var(--muted);margin-top:2px">${d.atBat.positions||''} · ${d.atBat.seasonAvg||'.000'} AVG</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:.65rem;color:var(--muted)">Today</div>
+          <div style="font-size:.78rem;font-weight:800;color:var(--text)">${d.atBat.liveH||0}-${d.atBat.liveAB||0}</div>
+        </div>
+      </div>
+      ${d.onDeck ? `<div style="font-size:.65rem;color:var(--muted);margin-top:6px">On Deck: <span style="color:var(--text);font-weight:700">${d.onDeck.fmtName}</span></div>` : ''}`;
+  } else {
+    content.innerHTML = `<span style="color:var(--muted);font-size:.82rem">${d.teamName||'Opponent'} — no batter data</span>`;
+  }
+}
+
+function _subscribeOpponent(oppCode) {
+  if (_oppUnsub) { _oppUnsub(); _oppUnsub = null; }
+  if (!oppCode || !db) return;
+  _oppUnsub = db.collection('live_games').doc(oppCode).onSnapshot(snap => {
+    _oppLiveData = snap.exists ? snap.data() : null;
+    if (!_gdWeAreBatting()) _renderOppBatter();
+  }, () => {});
+}
 
 function liveAddPitch(n) {
   const pid = gdFieldAssign['P'];
@@ -4631,6 +4828,7 @@ function liveAB(label, cls) {
   renderLiveLineup();
   renderLiveBases();
   renderLiveInning();
+  if (_gdWeAreBatting()) renderLiveNextUp();
   _showPostPlay(entry, label);
   gdSaveState();
   _publishLiveGame();
