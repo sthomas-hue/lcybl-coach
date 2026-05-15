@@ -4693,7 +4693,8 @@ function gdStartLive() {
                   batterIdx:0, pitchCounts:{}, pitcherBS:{}, subs:{}, fieldSubs:{}, lastResult:{}, log:[],
                   pulledPitchers:[], bases:{'1B':null,'2B':null,'3B':null}, stats:{},
                   basesOwner:{'1B':null,'2B':null,'3B':null}, isHome,
-                  count:{balls:0, strikes:0} };
+                  count:{balls:0, strikes:0},
+                  oppBases:{'1B':null,'2B':null,'3B':null}, oppBatterNum:0 };
   _liveTab = 'lineup';
   _oppLiveData = null;
   _subscribeOpponent(g?.opponentCode||null);
@@ -4792,24 +4793,32 @@ function renderLiveInning() {
 }
 
 function renderLiveBases() {
-  const bases = gdLiveState.bases || {'1B':null,'2B':null,'3B':null};
+  const fielding = !_gdWeAreBatting();
+  const bases = fielding
+    ? (gdLiveState.oppBases || {'1B':null,'2B':null,'3B':null})
+    : (gdLiveState.bases    || {'1B':null,'2B':null,'3B':null});
   const listLines = [];
   ['3B','2B','1B'].forEach(base => {
-    const pid  = bases[base];
-    const p    = pid ? S.players.find(x => x.id === pid) : null;
+    const runner   = bases[base]; // player ID (batting) or {n:N} object (fielding)
+    const p        = (!fielding && runner) ? S.players.find(x => x.id === runner) : null;
+    const occupied = !!runner;
     const poly = document.getElementById('lb-' + base);
     const txt  = document.getElementById('lb-' + base + '-txt');
     if (poly) {
-      poly.style.fill   = pid ? 'var(--accent)' : 'var(--surface2)';
-      poly.style.stroke = pid ? 'var(--accent)' : 'var(--border)';
+      poly.style.fill   = occupied ? (fielding ? 'rgba(52,152,219,.7)' : 'var(--accent)') : 'var(--surface2)';
+      poly.style.stroke = occupied ? (fielding ? '#74b9ff'              : 'var(--accent)') : 'var(--border)';
     }
-    if (txt) txt.textContent = p ? ('#' + (p.jersey || '?')) : '';
+    if (txt) txt.textContent = occupied
+      ? (fielding ? `R${runner.n}` : ('#' + (p?.jersey || '?')))
+      : '';
     const lbl = `<span style="color:var(--muted)">${base}:</span>`;
-    if (pid && p) {
+    if (occupied && !fielding && p) {
       const parts = p.name.trim().split(/\s+/);
       const first = parts[0]||''; const last = parts.slice(1).join(' ');
       const short = last ? `${first[0].toUpperCase()}. ${last}` : first;
       listLines.push(`<div style="white-space:nowrap">${lbl} <span style="color:var(--gold)">#${p.jersey||'?'} ${short}</span></div>`);
+    } else if (occupied && fielding) {
+      listLines.push(`<div style="white-space:nowrap">${lbl} <span style="color:#74b9ff">Runner ${runner.n}</span></div>`);
     } else {
       listLines.push(`<div style="white-space:nowrap;opacity:.35">${lbl}</div>`);
     }
@@ -4922,6 +4931,7 @@ function renderLivePitcher() {
   const fielding  = !_gdWeAreBatting();
   const count     = gdLiveState.count || {balls:0, strikes:0};
 
+  const hasOppLink = !!_oppLiveData;
   const pitchBtns = fielding ? (count.strikes >= 2
     ? `<div class="live-pitch-row" style="margin-bottom:4px">
          <button class="live-pitch-btn ball-btn"   onclick="livePitchField('ball')">⬤ Ball</button>
@@ -4950,6 +4960,33 @@ function renderLivePitcher() {
     <button onclick="liveWildPitch()" style="width:100%;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.35);color:var(--warn);padding:8px;border-radius:4px;cursor:pointer;font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚡ Wild Pitch</button>
     <div id="live-field-pitch-section"></div>` : '';
 
+  const oppOutcomeSection = (fielding && !hasOppLink) ? `
+    <div style="border-top:1px solid rgba(52,152,219,.25);margin-top:10px;padding-top:10px">
+      <div style="font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:#74b9ff;margin-bottom:8px">⚔ Opponent Batter</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:4px">
+        <button class="live-ab-btn hit" onclick="_liveFieldBatterReaches('1B')" style="font-size:.72rem;padding:6px 2px">1B</button>
+        <button class="live-ab-btn hit" onclick="_liveFieldBatterReaches('2B')" style="font-size:.72rem;padding:6px 2px">2B</button>
+        <button class="live-ab-btn hit" onclick="_liveFieldBatterReaches('3B')" style="font-size:.72rem;padding:6px 2px">3B</button>
+        <button class="live-ab-btn hit" onclick="_liveFieldBatterReaches('HR')" style="font-size:.72rem;padding:6px 2px">HR 🏠</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:4px">
+        <button class="live-ab-btn walk" onclick="_liveFieldBatterReaches('BB')" style="font-size:.72rem;padding:6px 2px">BB</button>
+        <button class="live-ab-btn walk" onclick="_liveFieldBatterReaches('HBP')" style="font-size:.72rem;padding:6px 2px">HBP</button>
+        <button onclick="openFieldErrorPicker()" style="font-size:.72rem;padding:6px 2px;background:rgba(228,0,43,.08);border:1px solid rgba(228,0,43,.3);color:var(--danger);border-radius:4px;cursor:pointer;font-weight:900">E ▼</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:4px">
+        <button class="live-ab-btn out" onclick="_liveFieldBatterOut('FO',1)" style="font-size:.72rem;padding:6px 2px">FO</button>
+        <button class="live-ab-btn out" onclick="_liveFieldBatterOut('GO',1)" style="font-size:.72rem;padding:6px 2px">GO</button>
+        <button class="live-ab-btn out" onclick="_liveFieldBatterOut('LO',1)" style="font-size:.72rem;padding:6px 2px">LO</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px">
+        <button class="live-ab-btn out" onclick="_liveFieldBatterOut('DP',2)" style="font-size:.72rem;padding:6px 2px">DP</button>
+        <button class="live-ab-btn out" onclick="_liveFieldBatterOut('Sac',1)" style="font-size:.72rem;padding:6px 2px">Sac</button>
+        <button class="live-ab-btn out" onclick="_liveFieldBatterSF()" style="font-size:.72rem;padding:6px 2px">SF</button>
+      </div>
+      ${_renderOppRunnerControls()}
+    </div>` : '';
+
   card.innerHTML = `
     <div class="live-pitch-strip">
       ${playerAvatar(pitcher, 36)}
@@ -4967,6 +5004,7 @@ function renderLivePitcher() {
       </div>
     </div>
     ${fieldingSection}
+    ${oppOutcomeSection}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:${fielding?4:10}px">
       ${pct>=100?'<div class="alert alert-danger" style="padding:5px 10px;font-size:.72rem;font-weight:900;flex:1;margin-right:8px">🛑 Limit reached — change pitcher now</div>':
         pct>=85?`<div class="alert alert-warn" style="padding:5px 10px;font-size:.72rem;flex:1;margin-right:8px">⚠ ${remaining} pitches left</div>`:'<div style="flex:1"></div>'}
@@ -5047,10 +5085,13 @@ function liveOuts(clicked) {
 function liveNextHalf() {
   (gdLiveState.log = gdLiveState.log||[]).push({
     type:'half_end', prevInning:gdLiveState.inning, prevHalf:gdLiveState.topBottom,
-    prevOuts:gdLiveState.outs, prevBases:{...(gdLiveState.bases||{})}
+    prevOuts:gdLiveState.outs, prevBases:{...(gdLiveState.bases||{})},
+    prevOppBases:{...(gdLiveState.oppBases||{})}, prevThemScore:gdLiveState.themScore
   });
   gdLiveState.bases      = {'1B':null,'2B':null,'3B':null};
   gdLiveState.basesOwner = {'1B':null,'2B':null,'3B':null};
+  gdLiveState.oppBases   = {'1B':null,'2B':null,'3B':null};
+  gdLiveState.oppBatterNum = 0;
   if (gdLiveState.topBottom === 'top') { gdLiveState.topBottom = 'bot'; }
   else { gdLiveState.topBottom = 'top'; gdLiveState.inning = Math.min(gdLiveState.inning + 1, 7); }
   gdLiveState.outs  = 0;
@@ -5269,6 +5310,235 @@ function liveWildPitch() {
     name:pName, result:'Wild Pitch', cls:'b-gray', detail:'' });
   renderLivePitcher(); gdSaveState(); _publishLiveGame();
 }
+// ── Opponent runner management (fielding, no linked opponent) ─
+function _liveOppBaseLog(extraFields) {
+  const entry = { type:'opp_ab',
+    prevOppBases:{...(gdLiveState.oppBases||{})},
+    prevThemScore:gdLiveState.themScore, prevOuts:gdLiveState.outs,
+    inning:gdLiveState.inning, half:gdLiveState.topBottom,
+    ...extraFields };
+  (gdLiveState.log = gdLiveState.log||[]).push(entry);
+}
+
+function _placeOppRunner(oppBases, destBase, runner) {
+  const NUM  = {'1B':1,'2B':2,'3B':3};
+  const BASE = {1:'1B',2:'2B',3:'3B'};
+  const D = NUM[destBase];
+  let runs = 0;
+  if (D === 1) {
+    if (oppBases['1B'] && oppBases['2B'] && oppBases['3B']) {
+      runs++; oppBases['3B'] = oppBases['2B']; oppBases['2B'] = oppBases['1B']; oppBases['1B'] = runner;
+    } else if (oppBases['1B'] && oppBases['2B']) {
+      oppBases['3B'] = oppBases['2B']; oppBases['2B'] = oppBases['1B']; oppBases['1B'] = runner;
+    } else if (oppBases['1B']) {
+      oppBases['2B'] = oppBases['1B']; oppBases['1B'] = runner;
+    } else {
+      oppBases['1B'] = runner;
+    }
+  } else {
+    const toMove = [];
+    for (let n = D; n >= 1; n--) {
+      if (oppBases[BASE[n]]) { toMove.push(oppBases[BASE[n]]); oppBases[BASE[n]] = null; }
+    }
+    oppBases[destBase] = runner;
+    for (const r of toMove) {
+      let placed = false;
+      for (let slot = D + 1; slot <= 3; slot++) {
+        if (!oppBases[BASE[slot]]) { oppBases[BASE[slot]] = r; placed = true; break; }
+      }
+      if (!placed) runs++;
+    }
+  }
+  return runs;
+}
+
+function _liveFieldBatterReaches(label) {
+  gdLiveState.oppBases    = gdLiveState.oppBases    || {'1B':null,'2B':null,'3B':null};
+  gdLiveState.oppBatterNum = (gdLiveState.oppBatterNum || 0) + 1;
+  const runner = { n: gdLiveState.oppBatterNum };
+  let runs = 0;
+  if (label === 'HR') {
+    runs = ['3B','2B','1B'].filter(b => gdLiveState.oppBases[b]).length + 1;
+    gdLiveState.oppBases = {'1B':null,'2B':null,'3B':null};
+  } else {
+    const dest = (label === 'BB' || label === 'HBP') ? '1B' : label;
+    runs = _placeOppRunner(gdLiveState.oppBases, dest, runner);
+  }
+  gdLiveState.themScore = (gdLiveState.themScore || 0) + runs;
+  const runsStr = runs ? ` (${runs} score${runs>1?'s':''})` : '';
+  _liveOppBaseLog({ result: label + runsStr, label });
+  _liveResetCount();
+  const ballInPlay = new Set(['1B','2B','3B','HR']);
+  if (ballInPlay.has(label)) _showFieldingPostPlay(label);
+  renderLiveBases(); renderLiveInning(); renderLivePitcher();
+  gdSaveState(); _publishLiveGame();
+}
+
+function _liveFieldBatterOut(label, nOuts) {
+  _liveOppBaseLog({ result: label, label });
+  gdLiveState.outs = Math.min(3, (gdLiveState.outs || 0) + nOuts);
+  if (gdLiveState.outs >= 3) {
+    gdLiveState.outs = 0; _liveResetCount();
+    liveNextHalf(); renderLiveMode(); return;
+  }
+  const ballInPlay = new Set(['FO','GO','LO','DP','Sac']);
+  if (ballInPlay.has(label)) _showFieldingPostPlay(label);
+  _liveResetCount();
+  renderLiveInning(); renderLivePitcher();
+  gdSaveState(); _publishLiveGame();
+}
+
+function _liveFieldBatterSF() {
+  let runs = 0;
+  gdLiveState.oppBases = gdLiveState.oppBases || {'1B':null,'2B':null,'3B':null};
+  if (gdLiveState.oppBases['3B']) {
+    gdLiveState.oppBases['3B'] = null; runs = 1;
+    gdLiveState.themScore = (gdLiveState.themScore || 0) + 1;
+  }
+  _liveOppBaseLog({ result: 'SF' + (runs ? ' (run scores)' : ''), label:'SF' });
+  gdLiveState.outs = Math.min(3, (gdLiveState.outs || 0) + 1);
+  if (gdLiveState.outs >= 3) {
+    gdLiveState.outs = 0; _liveResetCount();
+    liveNextHalf(); renderLiveMode(); return;
+  }
+  _liveResetCount();
+  renderLiveBases(); renderLiveInning(); renderLivePitcher();
+  gdSaveState(); _publishLiveGame();
+}
+
+function openFieldErrorPicker() {
+  const sec = document.getElementById('live-field-pitch-section');
+  if (!sec) return;
+  const positions = ['P','C','1B','2B','3B','SS','LF','CF','RF'];
+  sec.innerHTML = `
+    <div style="border:1px solid rgba(228,0,43,.3);border-radius:6px;padding:10px;margin-top:6px;background:rgba(228,0,43,.05)">
+      <div style="font-size:.65rem;font-weight:900;color:var(--danger);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">⚠ Error — Which position?</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">
+        ${positions.map(pos=>`<button onclick="_assignFieldError('${pos}')"
+          style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 4px;border-radius:4px;cursor:pointer;font-size:.72rem;font-weight:800">${pos}</button>`).join('')}
+      </div>
+      <button onclick="document.getElementById('live-field-pitch-section').innerHTML=''"
+        style="width:100%;margin-top:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.65rem;padding:4px">Cancel</button>
+    </div>`;
+}
+
+function _assignFieldError(pos) {
+  const pid = gdFieldAssign && gdFieldAssign[pos];
+  if (pid) {
+    gdLiveState.stats = gdLiveState.stats || {};
+    gdLiveState.stats[pid] = gdLiveState.stats[pid] || {};
+    gdLiveState.stats[pid].e = (gdLiveState.stats[pid].e || 0) + 1;
+  }
+  gdLiveState.oppBases     = gdLiveState.oppBases    || {'1B':null,'2B':null,'3B':null};
+  gdLiveState.oppBatterNum = (gdLiveState.oppBatterNum || 0) + 1;
+  const runner = { n: gdLiveState.oppBatterNum };
+  const runs   = _placeOppRunner(gdLiveState.oppBases, '1B', runner);
+  gdLiveState.themScore = (gdLiveState.themScore || 0) + runs;
+  const pObj = pid ? S.players.find(x => x.id === pid) : null;
+  const pName = pObj ? `#${pObj.jersey||'?'} ${pObj.name}` : pos;
+  const label = `E-${pos}`;
+  _liveOppBaseLog({ result:`E-${pos} (${pName})`, label });
+  const sec = document.getElementById('live-field-pitch-section');
+  if (sec) sec.innerHTML = '';
+  _liveResetCount();
+  renderLiveBases(); renderLiveInning(); renderLivePitcher();
+  gdSaveState(); _publishLiveGame();
+}
+
+function _renderOppRunnerControls() {
+  const oppBases = gdLiveState.oppBases || {'1B':null,'2B':null,'3B':null};
+  const occupied = ['3B','2B','1B'].filter(b => oppBases[b]);
+  if (!occupied.length) return '';
+  let html = `<div style="border-top:1px solid rgba(52,152,219,.2);padding-top:8px;margin-top:4px">
+    <div style="font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:6px">Runners On Base</div>`;
+  occupied.forEach(base => {
+    const runner   = oppBases[base];
+    const nextBase = base === '1B' ? '2B' : base === '2B' ? '3B' : null;
+    html += `<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;flex-wrap:wrap">
+      <span style="font-size:.68rem;font-weight:900;color:#74b9ff;min-width:28px">${base}</span>
+      <span style="font-size:.65rem;color:var(--muted)">Runner ${runner.n}</span>
+      ${nextBase ? `<button onclick="liveOppRunnerAdvance('${base}','Adv')" style="background:rgba(0,165,80,.1);border:1px solid rgba(0,165,80,.3);color:var(--ok);padding:3px 7px;border-radius:3px;cursor:pointer;font-size:.62rem;font-weight:800">→ ${nextBase}</button>` : ''}
+      <button onclick="liveOppRunnerScore('${base}')" style="background:rgba(0,165,80,.08);border:1px solid rgba(0,165,80,.25);color:var(--ok);padding:3px 7px;border-radius:3px;cursor:pointer;font-size:.62rem;font-weight:800">🏠 Score</button>
+      <button onclick="liveOppRunnerOut('${base}','Out')" style="background:rgba(228,0,43,.08);border:1px solid rgba(228,0,43,.3);color:var(--danger);padding:3px 7px;border-radius:3px;cursor:pointer;font-size:.62rem;font-weight:800">✕ Out</button>
+    </div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+function liveOppRunnerAdvance(base, reason) {
+  const oppBases = gdLiveState.oppBases = gdLiveState.oppBases || {'1B':null,'2B':null,'3B':null};
+  const nextBase = base === '1B' ? '2B' : base === '2B' ? '3B' : null;
+  if (!nextBase || !oppBases[base]) return;
+  const runner = oppBases[base];
+  _liveOppBaseLog({ result:`Runner ${runner.n} → ${nextBase}`, label:reason });
+  // If next base is occupied, try to cascade
+  if (oppBases[nextBase]) {
+    const afterNext = nextBase === '2B' ? '3B' : null;
+    if (afterNext && !oppBases[afterNext]) {
+      oppBases[afterNext] = oppBases[nextBase];
+    } else {
+      gdLiveState.themScore = (gdLiveState.themScore || 0) + 1;
+      const bumped = oppBases[nextBase];
+      gdLiveState.log.push({ type:'runner_event', inning:gdLiveState.inning, half:gdLiveState.topBottom,
+        name:`Opp. Runner ${bumped.n}`, result:'Scores (bumped)', cls:'b-red', detail:'' });
+    }
+  }
+  oppBases[nextBase] = runner;
+  oppBases[base] = null;
+  renderLiveBases(); renderLiveInning(); renderLivePitcher();
+  gdSaveState(); _publishLiveGame();
+}
+
+function liveOppRunnerScore(base) {
+  const oppBases = gdLiveState.oppBases = gdLiveState.oppBases || {'1B':null,'2B':null,'3B':null};
+  if (!oppBases[base]) return;
+  const runner = oppBases[base];
+  _liveOppBaseLog({ result:`Runner ${runner.n} scores`, label:'Score' });
+  gdLiveState.themScore = (gdLiveState.themScore || 0) + 1;
+  oppBases[base] = null;
+  renderLiveBases(); renderLiveInning(); renderLivePitcher();
+  gdSaveState(); _publishLiveGame();
+}
+
+function liveOppRunnerOut(base, reason) {
+  const oppBases = gdLiveState.oppBases = gdLiveState.oppBases || {'1B':null,'2B':null,'3B':null};
+  if (!oppBases[base]) return;
+  const runner = oppBases[base];
+  _liveOppBaseLog({ result:`Runner ${runner.n} out at ${base}`, label:'Out' });
+  oppBases[base] = null;
+  gdLiveState.outs = Math.min(3, (gdLiveState.outs || 0) + 1);
+  if (gdLiveState.outs >= 3) {
+    gdLiveState.outs = 0; liveNextHalf(); renderLiveMode(); return;
+  }
+  renderLiveBases(); renderLiveInning(); renderLivePitcher();
+  gdSaveState(); _publishLiveGame();
+}
+
+function _showFieldingPostPlay(label) {
+  const BALL_IN_PLAY_FIELD = new Set(['1B','2B','3B','HR','FO','GO','LO','DP','Sac']);
+  if (!BALL_IN_PLAY_FIELD.has(label)) return;
+  const sheet = document.getElementById('postplay-sheet');
+  if (!sheet) return;
+  const isHit = new Set(['1B','2B','3B','HR']).has(label);
+  document.getElementById('pp-result-row').innerHTML =
+    `<span style="font-weight:700;color:#74b9ff">Opp. Batter</span>` +
+    `<span class="badge ${isHit?'b-green':'b-red'}" style="font-size:.8rem;padding:3px 9px">${label}</span>`;
+  const errSec = document.getElementById('pp-error-section');
+  if (errSec) errSec.style.display = 'none';
+  const zoneSec = document.getElementById('pp-zone-section');
+  if (zoneSec) zoneSec.style.display = '';
+  document.getElementById('pp-loc-dot').setAttribute('cx', -30);
+  document.getElementById('pp-loc-dot').setAttribute('cy', -30);
+  document.getElementById('pp-loc-pulse').setAttribute('cx', -30);
+  document.getElementById('pp-loc-pulse').setAttribute('cy', -30);
+  document.getElementById('pp-zone-lbl').textContent = '';
+  // Point _ppEntry at the last log entry so zone marking saves to it
+  const log = gdLiveState.log || [];
+  _ppEntry = log.length ? log[log.length - 1] : { type:'opp_field' };
+  sheet.classList.add('open');
+}
+
 // ── Game event controls ───────────────────────────────────────
 function liveSetDelay() {
   gdLiveState.gameStatus = 'delayed';
@@ -5719,8 +5989,16 @@ function liveUndo() {
     gdLiveState.topBottom = entry.prevHalf;
     gdLiveState.outs      = Math.max(0, entry.prevOuts);
     gdLiveState.bases     = entry.prevBases || {'1B':null,'2B':null,'3B':null};
+    gdLiveState.oppBases  = entry.prevOppBases || {'1B':null,'2B':null,'3B':null};
+    if (entry.prevThemScore !== undefined) gdLiveState.themScore = entry.prevThemScore;
     gdLiveState.count     = {balls:0, strikes:0};
     renderLiveMode();
+  } else if (entry.type === 'opp_ab') {
+    gdLiveState.oppBases  = entry.prevOppBases || {'1B':null,'2B':null,'3B':null};
+    if (entry.prevThemScore !== undefined) gdLiveState.themScore = entry.prevThemScore;
+    if (entry.prevOuts !== undefined) gdLiveState.outs = entry.prevOuts;
+    _liveResetCount();
+    renderLiveBases(); renderLiveInning(); renderLivePitcher();
   } else if (entry.type === 'ab') {
     gdLiveState.batterIdx = entry.slotIdx;
     gdLiveState.bases     = entry.prevBases || {'1B':null,'2B':null,'3B':null};
@@ -5765,6 +6043,13 @@ function _liveBaseLog(extraFields) {
 }
 
 function liveRunnerAction(base) {
+  // When fielding, tap on base opens opp runner controls inline in pitcher card
+  if (!_gdWeAreBatting()) {
+    const oppBases = gdLiveState.oppBases || {'1B':null,'2B':null,'3B':null};
+    if (!oppBases[base]) return; // empty base while fielding — ignore tap
+    renderLivePitcher(); // re-render to show runner controls (already rendered, just scroll)
+    return;
+  }
   const bases = gdLiveState.bases = gdLiveState.bases || {'1B':null,'2B':null,'3B':null};
   const pid   = bases[base];
   const p     = pid ? S.players.find(x => x.id === pid) : null;
@@ -6666,6 +6951,11 @@ function _fmtLogEntry(entry) {
   if (entry.type==='runner_event') {
     return { half:inn, name:entry.name||'', result:entry.result||'', cls:entry.cls||'b-gray', type:'runner_event', detail:entry.detail||'' };
   }
+  if (entry.type==='opp_ab') {
+    const isOut = new Set(['FO','GO','LO','DP','Sac','SF','Out','CS','Tag']).has(entry.label||'');
+    const cls = isOut ? 'b-green' : (entry.label||'').startsWith('E-') ? 'b-yellow' : 'b-red';
+    return { half:inn, name:'Opp.', result:entry.result||entry.label||'', cls, type:'opp_ab', detail:entry.hitZone||'' };
+  }
   if (entry.type==='ab') {
     const slot = gdLineup && gdLineup[entry.slotIdx];
     const sub  = slot && gdLiveState.subs && gdLiveState.subs[slot.id];
@@ -6731,6 +7021,7 @@ function _publishLiveGame() {
     isHome:   gdLiveState.isHome!==false,
     outs:     gdLiveState.outs||0,
     bases:    {'1B':resolvePid(bases['1B']),'2B':resolvePid(bases['2B']),'3B':resolvePid(bases['3B'])},
+    oppBases: gdLiveState.oppBases || {'1B':null,'2B':null,'3B':null},
     batterIdx:idx,
     lineup:   lineupData,
     atBat:    bf ? { fmtName:bf.fmtName, positions:(batter.positions||[]).slice(0,3).join(' · ')||'—',
