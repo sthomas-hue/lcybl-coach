@@ -6,6 +6,7 @@
 <title>Moneyball</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 #gm-map { height:200px; background:var(--surface2); }
 .leaflet-container { font-family: inherit; background: #111; }
@@ -358,7 +359,11 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .spec-out-dot{width:9px;height:9px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--border)}
 .spec-out-dot.on{background:var(--gold);border-color:var(--gold)}
 .spec-live-badge{display:inline-flex;align-items:center;gap:4px;font-size:.52rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-top:6px}
-.spec-live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:specPulse 1.4s ease-in-out infinite}
+.spec-live-badge.delayed{color:var(--warn)}
+.spec-live-badge.ended{color:var(--muted);animation:none}
+.spec-live-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:specPulse 1.4s ease-in-out infinite}
+.spec-live-badge.ended .spec-live-dot{animation:none}
+.live-status-banner{background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.4);border-radius:var(--radius);padding:8px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 @keyframes specPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
 .spec-diamond-wrap{padding:14px 0 8px;display:flex;justify-content:center;flex-shrink:0}
 .spec-strips{padding:0 12px;display:flex;flex-direction:column;gap:7px;flex-shrink:0}
@@ -826,7 +831,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
         <div class="spec-out-dot" id="spec-out1"></div>
         <div class="spec-out-dot" id="spec-out2"></div>
       </div>
-      <div class="spec-live-badge"><div class="spec-live-dot"></div>LIVE</div>
+      <div class="spec-live-badge" id="spec-status-badge"><div class="spec-live-dot" id="spec-status-dot"></div><span id="spec-status-text">LIVE</span></div>
     </div>
     <div class="spec-team">
       <div class="spec-team-name" id="spec-them-name">THEM</div>
@@ -988,6 +993,37 @@ main{padding:16px;max-width:860px;margin:0 auto}
       <button class="btn btn-outline" onclick="closeModal('game-modal')">Cancel</button>
       <button class="btn btn-danger btn-sm" id="gm-delete-btn" onclick="deleteGame()" style="display:none">Delete</button>
       <button class="btn btn-primary" onclick="saveGame()">Save Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME EVENTS MODAL -->
+<div class="overlay" id="game-events-modal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-hdr">
+      <h2>Game Events</h2>
+      <button class="x-btn" onclick="closeModal('game-events-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:10px">
+      <button onclick="liveSetDelay();closeModal('game-events-modal')" class="btn btn-warn" style="justify-content:center;padding:14px">⛈ Weather Delay</button>
+      <button onclick="liveEndGame();closeModal('game-events-modal')" class="btn btn-outline" style="justify-content:center;padding:14px">🏁 End Game Early</button>
+      <button onclick="livePostpone();closeModal('game-events-modal')" class="btn btn-outline" style="justify-content:center;padding:14px">📅 Postpone Game</button>
+      <button onclick="liveCancel();closeModal('game-events-modal')" class="btn btn-danger" style="justify-content:center;padding:14px">✕ Cancel Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- RULES PDF MODAL -->
+<div class="overlay" id="rules-pdf-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-hdr">
+      <h2>Review Extracted Rules</h2>
+      <button class="x-btn" onclick="closeModal('rules-pdf-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="rules-pdf-body" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-ftr">
+      <button class="btn btn-outline" onclick="closeModal('rules-pdf-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="applyExtractedRules()">Apply Rules</button>
     </div>
   </div>
 </div>
@@ -1353,6 +1389,17 @@ main{padding:16px;max-width:860px;margin:0 auto}
           <span style="margin-left:auto;color:var(--muted)" id="live-wx-loc"></span>
         </div>
 
+        <!-- Game status banner (shown when delayed) -->
+        <div class="live-status-banner" id="live-status-banner" style="display:none">
+          <span id="live-status-txt" style="font-size:.8rem;font-weight:900;color:var(--warn)">⏸ Game Delayed</span>
+          <button class="btn btn-outline btn-sm" onclick="liveResumeGame()">▶ Resume</button>
+        </div>
+
+        <!-- Game events strip -->
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+          <button onclick="openModal('game-events-modal')" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px">⚡ Game Events</button>
+        </div>
+
         <!-- At-bat card (batting mode) -->
         <div class="card" style="padding:14px;margin-bottom:8px" id="live-ab-card">
           <div style="font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px">At Bat</div>
@@ -1584,6 +1631,13 @@ main{padding:16px;max-width:860px;margin:0 auto}
       <div class="card">
         <div class="card-title">Division Rules</div>
         <div class="rules-box" id="rules-display"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <label for="rules-pdf-input" class="btn btn-outline btn-sm" style="cursor:pointer">📄 Upload League Rules PDF</label>
+          <input type="file" id="rules-pdf-input" accept=".pdf,application/pdf" style="display:none" onchange="handleRulesPDF(this)">
+          <button class="btn btn-outline btn-sm" onclick="openRulesEditor()">✏ Edit Rules Manually</button>
+        </div>
+        <div style="font-size:.68rem;color:var(--muted);margin-top:6px">Upload the LCYBL rulebook PDF to auto-update pitch limits, innings, and rule flags. Always review before applying.</div>
+        <div id="rules-editor-wrap" style="display:none;margin-top:14px"></div>
       </div>
 
       <!-- Image Library -->
@@ -1723,7 +1777,11 @@ const RULES = {
   '14U Sec 2':{ pitchLimit:95,  innings:7, batAll:false, minPlay:0, leads:true,  steal:true,  infieldFly:true,  catch3rd:true,  pitchOuts:false },
   '14U Sec 3':{ pitchLimit:95,  innings:7, batAll:false, minPlay:0, leads:true,  steal:true,  infieldFly:true,  catch3rd:true,  pitchOuts:false }
 };
-function rules() { return RULES[S.division] || RULES['12U Sec 1']; }
+function rules() {
+  const base   = RULES[S.division] || RULES['12U Sec 1'];
+  const custom = S.customRules && S.customRules[S.division];
+  return custom ? { ...base, ...custom } : base;
+}
 
 function restDays(pitches) {
   if (pitches <= 25) return 0;
@@ -4861,6 +4919,37 @@ function renderLivePitcher() {
   const pct       = Math.min(100, thrown / limit * 100);
   const color     = pct<60?'var(--ok)':pct<85?'var(--warn)':'var(--danger)';
   const remaining = Math.max(0, limit - thrown);
+  const fielding  = !_gdWeAreBatting();
+  const count     = gdLiveState.count || {balls:0, strikes:0};
+
+  const pitchBtns = fielding ? (count.strikes >= 2
+    ? `<div class="live-pitch-row" style="margin-bottom:4px">
+         <button class="live-pitch-btn ball-btn"   onclick="livePitchField('ball')">⬤ Ball</button>
+         <button class="live-pitch-btn foul-btn"   onclick="livePitchField('foul')">Foul</button>
+         <button class="live-pitch-btn strike-btn" onclick="_liveFieldStrikeout('K')"   style="letter-spacing:0">K ✕</button>
+         <button class="live-pitch-btn strike-btn" onclick="_liveFieldStrikeout('K-L')" style="letter-spacing:0">K-L 👁</button>
+       </div>`
+    : `<div class="live-pitch-row" style="margin-bottom:4px">
+         <button class="live-pitch-btn ball-btn"   onclick="livePitchField('ball')">⬤ Ball</button>
+         <button class="live-pitch-btn foul-btn"   onclick="livePitchField('foul')">Foul</button>
+         <button class="live-pitch-btn strike-btn" onclick="livePitchField('strike')">Strike ✕</button>
+       </div>`) : '';
+
+  const fieldingSection = fielding ? `
+    <div class="live-count-strip" style="margin:10px 0 8px">
+      <div class="live-count-num">
+        <div class="live-count-big" style="color:var(--gold2)">${count.balls}</div>
+        <div class="live-count-lbl">Balls</div>
+      </div>
+      <div class="live-count-num" style="border-right:none">
+        <div class="live-count-big" style="color:#ff6680">${count.strikes}</div>
+        <div class="live-count-lbl">Strikes</div>
+      </div>
+    </div>
+    ${pitchBtns}
+    <button onclick="liveWildPitch()" style="width:100%;background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.35);color:var(--warn);padding:8px;border-radius:4px;cursor:pointer;font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚡ Wild Pitch</button>
+    <div id="live-field-pitch-section"></div>` : '';
+
   card.innerHTML = `
     <div class="live-pitch-strip">
       ${playerAvatar(pitcher, 36)}
@@ -4877,7 +4966,8 @@ function renderLivePitcher() {
         <button onclick="liveAddPitch(-1)" title="Manual −1 pitch correction" style="background:none;border:1px solid var(--border);color:var(--muted);width:38px;height:20px;border-radius:3px;cursor:pointer;font-size:.7rem;line-height:1">−</button>
       </div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+    ${fieldingSection}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:${fielding?4:10}px">
       ${pct>=100?'<div class="alert alert-danger" style="padding:5px 10px;font-size:.72rem;font-weight:900;flex:1;margin-right:8px">🛑 Limit reached — change pitcher now</div>':
         pct>=85?`<div class="alert alert-warn" style="padding:5px 10px;font-size:.72rem;flex:1;margin-right:8px">⚠ ${remaining} pitches left</div>`:'<div style="flex:1"></div>'}
       <button class="live-swap-btn" onclick="livePitcherSwap()">Change Pitcher ↕</button>
@@ -5066,6 +5156,178 @@ function livePitch(type) {
   gdSaveState();
   _publishLiveGame();
 }
+
+// ── Fielding-side pitch tracking ─────────────────────────────
+function livePitchField(type) {
+  const count = gdLiveState.count = gdLiveState.count || {balls:0, strikes:0};
+  const pid   = gdFieldAssign && gdFieldAssign['P'];
+  if (pid) {
+    gdLiveState.pitchCounts = gdLiveState.pitchCounts || {};
+    gdLiveState.pitchCounts[pid] = (gdLiveState.pitchCounts[pid]||0) + 1;
+    gdLiveState.pitcherBS = gdLiveState.pitcherBS || {};
+    gdLiveState.pitcherBS[pid] = gdLiveState.pitcherBS[pid] || {b:0,s:0,f:0};
+    if (type === 'ball')        gdLiveState.pitcherBS[pid].b++;
+    else if (type === 'strike') gdLiveState.pitcherBS[pid].s++;
+    else if (type === 'foul')   gdLiveState.pitcherBS[pid].f++;
+  }
+  if (type === 'ball') {
+    count.balls++;
+    if (count.balls >= 4) {
+      _liveResetCount();
+      gdLiveState.log = gdLiveState.log || [];
+      gdLiveState.log.push({ type:'runner_event', inning:gdLiveState.inning, half:gdLiveState.topBottom,
+        name:'Opp. Batter', result:'Walk (BB)', cls:'b-yellow', detail:'' });
+      renderLivePitcher(); gdSaveState(); _publishLiveGame(); return;
+    }
+  } else if (type === 'strike') {
+    count.strikes++;
+    if (count.strikes >= 3) { _liveFieldDroppedThird('K'); return; }
+  } else if (type === 'foul') {
+    if (count.strikes < 2) count.strikes++;
+  }
+  renderLivePitcher(); gdSaveState(); _publishLiveGame();
+}
+
+function _liveFieldStrikeout(label) {
+  const pid = gdFieldAssign && gdFieldAssign['P'];
+  if (pid) {
+    gdLiveState.pitchCounts = gdLiveState.pitchCounts || {};
+    gdLiveState.pitchCounts[pid] = (gdLiveState.pitchCounts[pid]||0) + 1;
+    gdLiveState.pitcherBS = gdLiveState.pitcherBS || {};
+    gdLiveState.pitcherBS[pid] = gdLiveState.pitcherBS[pid] || {b:0,s:0,f:0};
+    gdLiveState.pitcherBS[pid].s++;
+  }
+  gdLiveState.count = gdLiveState.count || {};
+  gdLiveState.count.strikes = 3;
+  _liveFieldDroppedThird(label);
+}
+
+function _liveFieldDroppedThird(label) {
+  label = label || 'K';
+  const pid     = gdFieldAssign && gdFieldAssign['P'];
+  const bases   = gdLiveState.bases || {};
+  const twoOuts = gdLiveState.outs === 2;
+  const livePlay = !bases['1B'] || twoOuts;
+  if (pid) {
+    gdLiveState.stats = gdLiveState.stats || {};
+    gdLiveState.stats[pid] = gdLiveState.stats[pid] || {};
+    gdLiveState.stats[pid].k = (gdLiveState.stats[pid].k||0) + 1;
+    if (label === 'K-L') gdLiveState.stats[pid].kl = (gdLiveState.stats[pid].kl||0) + 1;
+  }
+  if (!livePlay) { _liveResetCount(); _liveFieldOut(label); return; }
+  // Show inline dropped-3rd prompt in pitcher card section
+  const sec = document.getElementById('live-field-pitch-section');
+  if (!sec) { _liveResetCount(); _liveFieldOut(label); return; }
+  sec.innerHTML = `
+    <div style="text-align:center;padding:8px 0 4px;border-top:1px solid var(--border);margin-top:6px">
+      <div style="font-size:1rem;font-weight:900;margin-bottom:5px">⚡ Dropped 3rd Strike</div>
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:12px">Ball is live — did the batter reach 1B?</div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button onclick="_resolveFieldDroppedThird(true,'${label}')"
+          style="flex:1;max-width:140px;padding:11px;border-radius:6px;background:rgba(0,165,80,.15);border:1px solid rgba(0,165,80,.4);color:#00d466;font-size:.82rem;font-weight:900;cursor:pointer">✓ Safe at 1B</button>
+        <button onclick="_resolveFieldDroppedThird(false,'${label}')"
+          style="flex:1;max-width:140px;padding:11px;border-radius:6px;background:rgba(228,0,43,.12);border:1px solid rgba(228,0,43,.4);color:#ff6680;font-size:.82rem;font-weight:900;cursor:pointer">✕ Out (${label})</button>
+      </div>
+    </div>`;
+}
+
+function _resolveFieldDroppedThird(safe, label) {
+  _liveResetCount();
+  if (safe) {
+    gdLiveState.log = gdLiveState.log || [];
+    gdLiveState.log.push({ type:'runner_event', inning:gdLiveState.inning, half:gdLiveState.topBottom,
+      name:'Opp. Batter', result:`${label}-DS (reached 1B)`, cls:'b-yellow', detail:'' });
+    renderLivePitcher(); gdSaveState(); _publishLiveGame();
+  } else {
+    _liveFieldOut(label);
+  }
+}
+
+function _liveFieldOut(label) {
+  gdLiveState.outs = (gdLiveState.outs || 0) + 1;
+  gdLiveState.log = gdLiveState.log || [];
+  gdLiveState.log.push({ type:'runner_event', inning:gdLiveState.inning, half:gdLiveState.topBottom,
+    name:'Opp. Batter', result:label||'Out', cls:'b-red', detail:'' });
+  if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); renderLiveMode(); return; }
+  _liveResetCount();
+  renderLiveInning(); renderLivePitcher(); gdSaveState(); _publishLiveGame();
+}
+
+function liveWildPitch() {
+  const pid = gdFieldAssign && gdFieldAssign['P'];
+  if (!pid) return;
+  gdLiveState.pitchCounts = gdLiveState.pitchCounts || {};
+  gdLiveState.pitchCounts[pid] = (gdLiveState.pitchCounts[pid]||0) + 1;
+  gdLiveState.pitcherBS = gdLiveState.pitcherBS || {};
+  gdLiveState.pitcherBS[pid] = gdLiveState.pitcherBS[pid] || {b:0,s:0,f:0};
+  gdLiveState.stats = gdLiveState.stats || {};
+  gdLiveState.stats[pid] = gdLiveState.stats[pid] || {};
+  gdLiveState.stats[pid].wp = (gdLiveState.stats[pid].wp||0) + 1;
+  const pName = S.players.find(p=>p.id===pid)?.name || 'Pitcher';
+  gdLiveState.log = gdLiveState.log || [];
+  gdLiveState.log.push({ type:'runner_event', inning:gdLiveState.inning, half:gdLiveState.topBottom,
+    name:pName, result:'Wild Pitch', cls:'b-gray', detail:'' });
+  renderLivePitcher(); gdSaveState(); _publishLiveGame();
+}
+// ── Game event controls ───────────────────────────────────────
+function liveSetDelay() {
+  gdLiveState.gameStatus = 'delayed';
+  const banner = document.getElementById('live-status-banner');
+  const txt    = document.getElementById('live-status-txt');
+  if (banner) banner.style.display = 'flex';
+  if (txt)    txt.textContent = '⏸ Game Delayed — Weather';
+  gdSaveState(); _publishLiveGame();
+}
+
+function liveResumeGame() {
+  gdLiveState.gameStatus = 'live';
+  const banner = document.getElementById('live-status-banner');
+  if (banner) banner.style.display = 'none';
+  gdSaveState(); _publishLiveGame();
+}
+
+function livePostpone() {
+  confirm2('Postpone Game', 'Mark this game as postponed? The live session will end.', () => {
+    gdLiveState.gameStatus = 'postponed';
+    gdSaveState(); _publishLiveGame();
+    const g = S.games?.find(x => x.id === document.getElementById('gd-game-select')?.value);
+    if (g) { g.postponed = true; save(); }
+    renderLiveMode();
+  });
+}
+
+function liveCancel() {
+  confirm2('Cancel Game', 'Mark this game as cancelled? The live session will end.', () => {
+    gdLiveState.gameStatus = 'cancelled';
+    gdSaveState(); _publishLiveGame();
+    const g = S.games?.find(x => x.id === document.getElementById('gd-game-select')?.value);
+    if (g) { g.cancelled = true; save(); }
+    renderLiveMode();
+  });
+}
+
+function liveEndGame() {
+  const R       = rules();
+  const inning  = gdLiveState.inning || 1;
+  const maxInn  = R.innings || 6;
+  const usScore = gdLiveState.usScore || 0;
+  const thScore = gdLiveState.themScore || 0;
+  const msg = inning < maxInn
+    ? `End game after ${inning} inning${inning!==1?'s':''}? (${maxInn}-inning game — ending early)\n\nFinal: ${usScore}–${thScore}`
+    : `End game? Final: ${usScore}–${thScore}`;
+  confirm2('End Game', msg, () => {
+    gdLiveState.gameStatus = 'ended';
+    gdSaveState(); _publishLiveGame();
+    const selGame = document.getElementById('gd-game-select')?.value;
+    const g = S.games?.find(x => x.id === selGame);
+    if (g) {
+      g.result = { runs: usScore, opp: thScore, innings: inning };
+      save(); renderSchedule();
+    }
+    renderLiveMode();
+  });
+}
+// ─────────────────────────────────────────────────────────────
 
 function _liveStrikeout(label) {
   const count = gdLiveState.count = gdLiveState.count || {balls:0, strikes:0};
@@ -6479,6 +6741,7 @@ function _publishLiveGame() {
     log:      fmtLog,
     count:    gdLiveState.count || {balls:0, strikes:0},
     weather:  _liveWxData || null,
+    gameStatus: gdLiveState.gameStatus || 'live',
     isLive:   true,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(e=>console.warn('Publish live:',e));
@@ -6788,6 +7051,16 @@ function renderSpectatorView(data) {
     (data.topBottom==='top'?'▲ ':'▼ ') + (ord[(data.inning||1)-1]||(data.inning||1)+'th');
   [0,1,2].forEach(i => document.getElementById('spec-out'+i).classList.toggle('on', i<(data.outs||0)));
 
+  // Status badge
+  const statusBadge = document.getElementById('spec-status-badge');
+  const statusText  = document.getElementById('spec-status-text');
+  if (statusBadge && statusText) {
+    const st = data.gameStatus || 'live';
+    statusBadge.className = 'spec-live-badge' + (st==='delayed'?' delayed':st==='live'?'':' ended');
+    const labels = { live:'LIVE', delayed:'DELAYED', postponed:'POSTPONED', cancelled:'CANCELLED', ended:'FINAL' };
+    statusText.textContent = labels[st] || 'LIVE';
+  }
+
   // Bases diamond — animate runners before updating polygons
   const color = data.teamColor||'var(--accent)';
   const bases = data.bases||{};
@@ -7066,6 +7339,197 @@ if (_watchCode) {
   document.getElementById('auth-screen').classList.remove('open');
   initApp();
   hideSplash();
+}
+
+// ============================================================
+// RULES PDF EXTRACTION
+// ============================================================
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+let _extractedRules = null;
+
+async function handleRulesPDF(input) {
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  const body = document.getElementById('rules-pdf-body');
+  body.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:16px 0">Extracting text from PDF…</div>';
+  openModal('rules-pdf-modal');
+  try {
+    if (!window.pdfjsLib) throw new Error('PDF.js not loaded');
+    const buf   = await file.arrayBuffer();
+    const pdf   = await pdfjsLib.getDocument({ data: buf }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page  = await pdf.getPage(i);
+      const cont  = await page.getTextContent();
+      text += cont.items.map(s => s.str).join(' ') + '\n';
+    }
+    _extractedRules = _parseRulesText(text);
+    _renderRulesPDFReview(_extractedRules, text.slice(0, 200));
+  } catch(e) {
+    body.innerHTML = `<div style="color:var(--danger);font-size:.85rem;padding:12px 0">Could not read PDF: ${e.message}<br><br>Try "Edit Rules Manually" instead.</div>`;
+  }
+}
+
+function _parseRulesText(text) {
+  const t = text.replace(/\s+/g,' ');
+  const extracted = {};
+  const divKeys = Object.keys(RULES);
+
+  // Pitch limits — look for patterns like "8U ... 50 pitches" or "pitch limit ... 65"
+  divKeys.forEach(div => {
+    const safeDiv = div.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const m = t.match(new RegExp(safeDiv + '[^.]{0,80}?(\\d{2,3})\\s*pitch', 'i'))
+           || t.match(new RegExp('pitch[^.]{0,40}?' + safeDiv + '[^.]{0,40}?(\\d{2,3})', 'i'));
+    if (m) extracted[div] = extracted[div] || {};
+    if (m) extracted[div].pitchLimit = parseInt(m[1], 10);
+  });
+
+  // Innings — look for "X innings" near division names or "game length"
+  divKeys.forEach(div => {
+    const safeDiv = div.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const m = t.match(new RegExp(safeDiv + '[^.]{0,80}?(\\d)\\s*inning', 'i'))
+           || t.match(new RegExp('(\\d)\\s*inning[^.]{0,60}?' + safeDiv, 'i'));
+    if (m) { extracted[div] = extracted[div] || {}; extracted[div].innings = parseInt(m[1], 10); }
+  });
+
+  // Rest days — look for standard rest day thresholds
+  const restMatch = t.match(/(\d+)[–\-](\d+)\s*pitches?\s*[=:→\-]\s*(\d+)\s*day/gi);
+  if (restMatch) extracted._restDays = restMatch.slice(0, 6).join('; ');
+
+  // Boolean flags by division — leading / stealing
+  divKeys.forEach(div => {
+    const safeDiv = div.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const secText = t.match(new RegExp(safeDiv + '[^.]{0,300}', 'i'))?.[0] || '';
+    if (secText) {
+      extracted[div] = extracted[div] || {};
+      if (/no leads?/i.test(secText))  extracted[div].leads = false;
+      if (/leads? allowed/i.test(secText)) extracted[div].leads = true;
+      if (/no steal/i.test(secText))   extracted[div].steal = false;
+      if (/steal(ing)? allowed/i.test(secText)) extracted[div].steal = true;
+    }
+  });
+
+  return extracted;
+}
+
+function _renderRulesPDFReview(extracted, preview) {
+  const body = document.getElementById('rules-pdf-body');
+  const divs = Object.keys(RULES);
+  const found = divs.filter(d => extracted[d] && Object.keys(extracted[d]).length > 0);
+
+  if (!found.length && !extracted._restDays) {
+    body.innerHTML = `
+      <div style="color:var(--warn);margin-bottom:12px;font-size:.82rem">⚠ Could not automatically detect rule values from this PDF. The format may differ from what's expected.</div>
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:8px">First 200 chars extracted:</div>
+      <div style="background:var(--surface2);padding:8px;border-radius:4px;font-size:.68rem;font-family:monospace;word-break:break-all">${preview}</div>
+      <div style="margin-top:12px;font-size:.78rem;color:var(--muted)">Use "Edit Rules Manually" in Settings to update values directly.</div>`;
+    return;
+  }
+
+  let html = '<div style="font-size:.78rem;color:var(--muted);margin-bottom:14px">Review the values extracted from the PDF. Uncheck any you want to skip.</div>';
+  if (extracted._restDays) {
+    html += `<div style="margin-bottom:10px;padding:8px;background:var(--surface2);border-radius:4px;font-size:.75rem"><b>Rest Day Thresholds detected:</b><br><span style="color:var(--muted)">${extracted._restDays}</span><br><span style="font-size:.65rem;color:var(--muted)">Rest day logic is hardcoded — manual update required if thresholds changed.</span></div>`;
+  }
+  found.forEach(div => {
+    const vals = extracted[div];
+    html += `<div style="margin-bottom:10px;padding:10px;background:var(--surface2);border-radius:4px">
+      <div style="font-weight:900;font-size:.8rem;margin-bottom:6px">${div}</div>`;
+    Object.entries(vals).forEach(([k, v]) => {
+      const labels = { pitchLimit:'Pitch Limit', innings:'Innings', leads:'Leads Allowed', steal:'Stealing Allowed', batAll:'Bat All', minPlay:'Min Play (innings)', infieldFly:'Infield Fly Rule', catch3rd:'Catcher Hold 3rd Strike' };
+      const display = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : v;
+      html += `<label style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:.75rem;cursor:pointer">
+        <input type="checkbox" checked data-div="${div}" data-key="${k}" data-val="${v}" style="width:14px;height:14px">
+        ${labels[k]||k}: <strong>${display}</strong>
+      </label>`;
+    });
+    html += '</div>';
+  });
+  body.innerHTML = html;
+}
+
+function applyExtractedRules() {
+  if (!_extractedRules || !S) return;
+  S.customRules = S.customRules || {};
+  document.querySelectorAll('#rules-pdf-body input[type=checkbox]:checked').forEach(cb => {
+    const div = cb.dataset.div;
+    const key = cb.dataset.key;
+    let   val = cb.dataset.val;
+    if (val === 'true')  val = true;
+    else if (val === 'false') val = false;
+    else if (!isNaN(val)) val = Number(val);
+    S.customRules[div] = S.customRules[div] || {};
+    S.customRules[div][key] = val;
+  });
+  save();
+  renderRulesBox();
+  closeModal('rules-pdf-modal');
+  alert('Rules updated. Review in the Division Rules section below.');
+}
+
+function openRulesEditor() {
+  const wrap = document.getElementById('rules-editor-wrap');
+  if (!wrap) return;
+  if (wrap.style.display !== 'none') { wrap.style.display = 'none'; return; }
+  const R   = { ...RULES[S.division] || RULES['12U Sec 1'], ...(S.customRules?.[S.division]||{}) };
+  const fields = [
+    { key:'pitchLimit', label:'Pitch Limit (pitches/day)', type:'number' },
+    { key:'innings',    label:'Game Length (innings)',      type:'number' },
+    { key:'minPlay',    label:'Minimum Play (innings)',     type:'number' },
+    { key:'batAll',     label:'Bat All',                   type:'bool'   },
+    { key:'leads',      label:'Leads Allowed',             type:'bool'   },
+    { key:'steal',      label:'Stealing Allowed',          type:'bool'   },
+    { key:'infieldFly', label:'Infield Fly Rule',          type:'bool'   },
+    { key:'catch3rd',   label:'Catcher Hold 3rd Strike',   type:'bool'   },
+  ];
+  wrap.style.display = 'block';
+  wrap.innerHTML = `
+    <div style="font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px">Override Rules for ${S.division}</div>
+    ${fields.map(f => `
+      <div class="fg" style="margin-bottom:8px">
+        <label style="font-size:.72rem">${f.label}</label>
+        ${f.type==='bool'
+          ? `<select id="re-${f.key}" style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);padding:6px 8px;font-size:.82rem;width:100%">
+               <option value="true"  ${R[f.key]===true ?'selected':''}>Yes</option>
+               <option value="false" ${R[f.key]===false?'selected':''}>No</option>
+             </select>`
+          : `<input id="re-${f.key}" type="number" value="${R[f.key]||0}" style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);padding:6px 8px;font-size:.82rem;width:100%">`
+        }
+      </div>`).join('')}
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-primary btn-sm" onclick="saveRulesOverride()">Save Override</button>
+      <button class="btn btn-outline btn-sm" onclick="clearRulesOverride()">Reset to Default</button>
+    </div>`;
+}
+
+function saveRulesOverride() {
+  if (!S) return;
+  S.customRules = S.customRules || {};
+  S.customRules[S.division] = {};
+  const bools = ['batAll','leads','steal','infieldFly','catch3rd'];
+  const nums  = ['pitchLimit','innings','minPlay'];
+  bools.forEach(k => {
+    const el = document.getElementById('re-'+k);
+    if (el) S.customRules[S.division][k] = el.value === 'true';
+  });
+  nums.forEach(k => {
+    const el = document.getElementById('re-'+k);
+    if (el) S.customRules[S.division][k] = parseInt(el.value, 10);
+  });
+  save(); renderRulesBox();
+  const btn = event?.target;
+  if (btn) { const o = btn.textContent; btn.textContent = '✓ Saved'; setTimeout(()=>btn.textContent=o,1500); }
+}
+
+function clearRulesOverride() {
+  if (!S) return;
+  if (S.customRules) { delete S.customRules[S.division]; save(); }
+  renderRulesBox();
+  document.getElementById('rules-editor-wrap').style.display = 'none';
 }
 </script>
 </body>
