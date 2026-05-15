@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Moneyball</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+#gm-map { height:200px; background:var(--surface2); }
+.leaflet-container { font-family: inherit; background: #111; }
+</style>
 <style>
 :root{--bg:#090909;--surface:#141414;--surface2:#1c1c1c;--accent:#e4002b;--accent2:#ff1f47;--text:#fff;--muted:#777;--border:#272727;--warn:#f5a623;--danger:#e4002b;--ok:#00a550;--gold:#c9a84c;--gold2:#e8c76e;--radius:6px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -656,6 +662,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
           </select>
         </div>
         <div class="fg" style="text-align:left"><label>Season Year</label><input id="setup-year" type="number" value="2026" /></div>
+        <div class="fg" style="text-align:left"><label>Home Field <span style="font-weight:500;color:var(--muted)">(optional)</span></label><input id="setup-homefield" placeholder="e.g. Conestoga Valley Park, 100 Main St, Lancaster PA" /></div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px" onclick="doSetup()">Get Started →</button>
         <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
           <div style="flex:1;height:1px;background:var(--border)"></div>
@@ -950,9 +957,24 @@ main{padding:16px;max-width:860px;margin:0 auto}
       </div>
       <div class="fg"><label>Opponent</label><input id="gm-opp" placeholder="Team name" /></div>
       <div class="fg"><label>Location</label>
-        <select id="gm-loc"><option value="Home">Home</option><option value="Away">Away</option></select>
+        <select id="gm-loc" onchange="gmLocChanged()"><option value="Home">Home</option><option value="Away">Away</option></select>
       </div>
-      <div class="fg"><label>Field / Address (optional)</label><input id="gm-field" placeholder="Field name or address" /></div>
+      <div class="fg">
+        <label>Field / Address (optional)</label>
+        <input id="gm-field" placeholder="Field name or address" oninput="gmFieldUpdated()" />
+        <div id="gm-field-hint" style="display:none;font-size:.68rem;color:var(--muted);margin-top:4px">
+          Using home field — edit above to override for this game.
+        </div>
+      </div>
+      <div id="gm-map-wrap" style="display:none;margin-bottom:12px">
+        <div style="font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📍 Map Preview</div>
+        <div id="gm-map" style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden"></div>
+        <div style="font-size:.62rem;color:var(--muted);margin-top:5px">Drag the pin to adjust exact location — saved per game.</div>
+      </div>
+      <div class="fg">
+        <label>Notes (optional)</label>
+        <textarea id="gm-notes" rows="3" placeholder="e.g. Field #2 — entrance off Oak St, park in Lot B" style="resize:vertical;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);padding:8px;font-size:.85rem;font-family:inherit"></textarea>
+      </div>
       <div class="fg" id="gm-link-wrap">
         <label>Opponent App Link (optional)</label>
         <div style="display:flex;gap:8px;align-items:center">
@@ -1501,8 +1523,13 @@ main{padding:16px;max-width:860px;margin:0 auto}
       <div class="card">
         <div class="card-title">Team Identity</div>
         <div id="set-team-info" style="margin-bottom:12px;font-size:.9rem"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
           <button class="btn btn-outline btn-sm" onclick="openAddTeamModal(true)">✏ Edit Name / Division / Logo / Colors</button>
+        </div>
+        <div class="fg" style="margin-bottom:6px">
+          <label>Home Field / Address</label>
+          <input id="set-homefield" placeholder="e.g. Conestoga Valley Park, 100 Main St, Lancaster PA" oninput="saveHomeField()" />
+          <div style="font-size:.68rem;color:var(--muted);margin-top:4px">Auto-fills the field address when you add a home game to the schedule.</div>
         </div>
         <!-- Inline quick-color swatches -->
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1980,11 +2007,13 @@ function confirm2(title, msg, cb) {
 // SETUP
 // ============================================================
 function doSetup() {
-  const name = document.getElementById('setup-team').value.trim();
-  const div  = document.getElementById('setup-div').value;
-  const year = document.getElementById('setup-year').value;
+  const name      = document.getElementById('setup-team').value.trim();
+  const div       = document.getElementById('setup-div').value;
+  const year      = document.getElementById('setup-year').value;
+  const homeField = document.getElementById('setup-homefield').value.trim();
   if (!name) { alert('Enter a team name'); return; }
   const t = blankTeam(name, div, year);
+  if (homeField) t.homeField = homeField;
   APP.teams.push(t);
   APP.currentTeamId = t.id;
   S = t;
@@ -2562,6 +2591,8 @@ function renderSchedule() {
       <div class="game-info">
         <div class="game-opp">vs ${g.opponent}</div>
         <div class="game-meta">${g.location} · ${g.time||'TBD'}${g.field?' · '+g.field:''}</div>
+        ${g.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:2px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px" title="${g.notes.replace(/"/g,'&quot;')}">📝 ${g.notes}</div>`:''}
+
         <div style="display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap">
           ${canWx ? `<div id="wx-${g.id}" class="game-wx" title="Loading forecast…">🌡 —</div>` : ''}
           ${dirUrl ? `<a class="game-dir" href="${dirUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Directions to ${g.field}">📍 Directions</a>` : ''}
@@ -2573,8 +2604,49 @@ function renderSchedule() {
   if (sorted.some(g => g.field && g.date >= todayStr)) _injectScheduleWeather();
 }
 
+let _gmMap = null, _gmMarker = null, _gmPinLatLon = null, _gmFieldTimer = null;
+
+function _gmInitMap(lat, lon) {
+  if (!window.L) return;
+  const wrap = document.getElementById('gm-map-wrap');
+  const container = document.getElementById('gm-map');
+  if (!wrap || !container) return;
+  wrap.style.display = 'block';
+  if (_gmMap) { _gmMap.remove(); _gmMap = null; _gmMarker = null; }
+  _gmPinLatLon = { lat, lon };
+  _gmMap = L.map('gm-map', { zoomControl: true }).setView([lat, lon], 16);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 19
+  }).addTo(_gmMap);
+  _gmMarker = L.marker([lat, lon], { draggable: true }).addTo(_gmMap);
+  _gmMarker.on('dragend', e => {
+    const p = e.target.getLatLng();
+    _gmPinLatLon = { lat: p.lat, lon: p.lng };
+  });
+  setTimeout(() => _gmMap && _gmMap.invalidateSize(), 120);
+}
+
+function gmFieldUpdated() {
+  clearTimeout(_gmFieldTimer);
+  const addr = document.getElementById('gm-field').value.trim();
+  if (!addr) { document.getElementById('gm-map-wrap').style.display = 'none'; _gmPinLatLon = null; return; }
+  _gmFieldTimer = setTimeout(async () => {
+    const coords = await _geocode(addr);
+    if (!coords) return;
+    if (_gmMap) {
+      _gmMap.setView([coords.lat, coords.lon], 16);
+      _gmMarker.setLatLng([coords.lat, coords.lon]);
+      _gmPinLatLon = { lat: coords.lat, lon: coords.lon };
+    } else {
+      _gmInitMap(coords.lat, coords.lon);
+    }
+  }, 700);
+}
+
 function openGameModal(id) {
   const el = (i) => document.getElementById(i);
+  let pinLatLon = null;
   if (id) {
     const g = S.games.find(x=>x.id===id);
     if (!g) return;
@@ -2585,9 +2657,12 @@ function openGameModal(id) {
     el('gm-opp').value = g.opponent;
     el('gm-loc').value = g.location;
     el('gm-field').value = g.field||'';
+    el('gm-field-hint').style.display = (g.location==='Home' && S.homeField && g.field===S.homeField) ? 'block' : 'none';
+    el('gm-notes').value = g.notes||'';
     el('gm-opp-code').value = g.opponentCode||'';
     el('gm-opp-code-status').textContent = g.opponentCode ? '✓ Linked' : '';
     el('gm-delete-btn').style.display='inline-flex';
+    pinLatLon = g.pinLatLon || null;
   } else {
     el('gm-title').textContent = 'Add Game';
     el('gm-id').value = '';
@@ -2595,12 +2670,46 @@ function openGameModal(id) {
     el('gm-time').value = '18:00';
     el('gm-opp').value = '';
     el('gm-loc').value = 'Home';
-    el('gm-field').value = '';
+    el('gm-field').value = S.homeField || '';
+    el('gm-field-hint').style.display = S.homeField ? 'block' : 'none';
+    el('gm-notes').value = '';
     el('gm-opp-code').value = '';
     el('gm-opp-code-status').textContent = '';
     el('gm-delete-btn').style.display='none';
   }
+  // Reset map state
+  if (_gmMap) { _gmMap.remove(); _gmMap = null; _gmMarker = null; }
+  _gmPinLatLon = null;
+  document.getElementById('gm-map-wrap').style.display = 'none';
   openModal('game-modal');
+  // Init map after modal is visible
+  const addr = document.getElementById('gm-field').value.trim();
+  if (addr) {
+    setTimeout(async () => {
+      if (pinLatLon) {
+        _gmInitMap(pinLatLon.lat, pinLatLon.lon);
+        _gmPinLatLon = pinLatLon;
+      } else {
+        const coords = await _geocode(addr);
+        if (coords) _gmInitMap(coords.lat, coords.lon);
+      }
+    }, 80);
+  }
+}
+
+function gmLocChanged() {
+  const loc   = document.getElementById('gm-loc').value;
+  const field = document.getElementById('gm-field');
+  const hint  = document.getElementById('gm-field-hint');
+  if (loc === 'Home' && S.homeField && !field.value.trim()) {
+    field.value = S.homeField;
+    hint.style.display = 'block';
+  } else if (loc === 'Away' && field.value.trim() === S.homeField) {
+    field.value = '';
+    hint.style.display = 'none';
+  } else {
+    hint.style.display = (loc === 'Home' && S.homeField && field.value.trim() === S.homeField) ? 'block' : 'none';
+  }
 }
 
 function saveGame() {
@@ -2614,7 +2723,9 @@ function saveGame() {
     time: document.getElementById('gm-time').value,
     location: document.getElementById('gm-loc').value,
     field: document.getElementById('gm-field').value.trim(),
+    notes: document.getElementById('gm-notes').value.trim(),
     opponentCode: oppCode||null,
+    pinLatLon: _gmPinLatLon || null,
     result: null, gameStats:{}
   };
   if (id) {
@@ -3846,10 +3957,17 @@ function renderTeamStats() {
 function renderSettings() {
   document.getElementById('set-team-info').innerHTML =
     `<b>${S.name}</b> &nbsp;·&nbsp; ${S.division} &nbsp;·&nbsp; ${S.season} season`;
-  document.getElementById('qs-color1').value = S.colors?.primary   || '#e4002b';
-  document.getElementById('qs-color2').value = S.colors?.secondary || '#ffffff';
+  document.getElementById('qs-color1').value  = S.colors?.primary   || '#e4002b';
+  document.getElementById('qs-color2').value  = S.colors?.secondary || '#ffffff';
+  document.getElementById('set-homefield').value = S.homeField || '';
   renderRulesBox();
   renderImgLibrary();
+}
+
+function saveHomeField() {
+  if (!S) return;
+  S.homeField = document.getElementById('set-homefield').value.trim();
+  save();
 }
 
 function quickColor() {
@@ -4529,8 +4647,10 @@ function renderLiveBases() {
     if (txt) txt.textContent = p ? ('#' + (p.jersey || '?')) : '';
     const lbl = `<span style="color:var(--muted)">${base}:</span>`;
     if (pid && p) {
-      const last = p.name.split(' ').pop();
-      listLines.push(`<div style="white-space:nowrap">${lbl} <span style="color:var(--gold)">#${p.jersey||'?'} ${last}</span></div>`);
+      const parts = p.name.trim().split(/\s+/);
+      const first = parts[0]||''; const last = parts.slice(1).join(' ');
+      const short = last ? `${first[0].toUpperCase()}. ${last}` : first;
+      listLines.push(`<div style="white-space:nowrap">${lbl} <span style="color:var(--gold)">#${p.jersey||'?'} ${short}</span></div>`);
     } else {
       listLines.push(`<div style="white-space:nowrap;opacity:.35">${lbl}</div>`);
     }
@@ -4598,7 +4718,10 @@ function renderLiveAB() {
     <div class="live-pitch-row">
       <button class="live-pitch-btn ball-btn" onclick="livePitch('ball')">⬤ Ball</button>
       <button class="live-pitch-btn foul-btn" onclick="livePitch('foul')">Foul</button>
-      <button class="live-pitch-btn strike-btn" onclick="livePitch('strike')">Strike ✕</button>
+      ${count.strikes >= 2
+        ? `<button class="live-pitch-btn strike-btn" onclick="_liveStrikeout('K')" style="letter-spacing:0">K ✕</button>
+           <button class="live-pitch-btn strike-btn" onclick="_liveStrikeout('K-L')" style="letter-spacing:0">K-L 👁</button>`
+        : `<button class="live-pitch-btn strike-btn" onclick="livePitch('strike')">Strike ✕</button>`}
     </div>
     <div class="live-outcome-grid" style="margin-bottom:6px">
       ${MAIN.map(o=>`<button class="live-ab-btn ${o.cls}" onclick="liveAB('${o.label}','${o.cls}')">${o.label}</button>`).join('')}
@@ -4843,7 +4966,22 @@ function livePitch(type) {
   _publishLiveGame();
 }
 
-function _liveDroppedThird() {
+function _liveStrikeout(label) {
+  const count = gdLiveState.count = gdLiveState.count || {balls:0, strikes:0};
+  const pid = gdFieldAssign && gdFieldAssign['P'];
+  if (pid && !_gdWeAreBatting()) {
+    gdLiveState.pitchCounts = gdLiveState.pitchCounts || {};
+    gdLiveState.pitchCounts[pid] = (gdLiveState.pitchCounts[pid]||0) + 1;
+    gdLiveState.pitcherBS = gdLiveState.pitcherBS || {};
+    gdLiveState.pitcherBS[pid] = gdLiveState.pitcherBS[pid] || {b:0,s:0,f:0};
+    gdLiveState.pitcherBS[pid].s++;
+  }
+  count.strikes = 3;
+  _liveDroppedThird(label);
+}
+
+function _liveDroppedThird(label) {
+  label = label || 'K';
   const bases   = gdLiveState.bases || {};
   const twoOuts = gdLiveState.outs === 2;
   // Dropped third is live when: no runner on 1B, OR 2 outs (regardless of 1B)
@@ -4852,38 +4990,37 @@ function _liveDroppedThird() {
   if (!livePlay) {
     // Runner on 1B, fewer than 2 outs → automatic K, ball is dead
     _liveResetCount();
-    liveAB('K', 'out');
+    liveAB(label, 'out');
     return;
   }
 
   // Show inline confirm in the at-bat card area
   const card = document.getElementById('live-ab-card');
-  if (!card) { _liveResetCount(); liveAB('K', 'out'); return; }
+  if (!card) { _liveResetCount(); liveAB(label, 'out'); return; }
   card.innerHTML = `
     <div style="text-align:center;padding:8px 0 4px">
       <div style="font-size:1.1rem;font-weight:900;margin-bottom:6px">⚡ Dropped 3rd Strike</div>
       <div style="font-size:.75rem;color:var(--muted);margin-bottom:18px">Ball is live — did the batter reach 1B safely?</div>
       <div style="display:flex;gap:10px;justify-content:center">
-        <button onclick="_resolveDroppedThird(true)"
+        <button onclick="_resolveDroppedThird(true,'${label}')"
           style="flex:1;max-width:160px;padding:14px;border-radius:6px;background:rgba(0,165,80,.15);border:1px solid rgba(0,165,80,.4);color:#00d466;font-size:.85rem;font-weight:900;cursor:pointer;letter-spacing:.3px">
           ✓ Safe at 1B
         </button>
-        <button onclick="_resolveDroppedThird(false)"
+        <button onclick="_resolveDroppedThird(false,'${label}')"
           style="flex:1;max-width:160px;padding:14px;border-radius:6px;background:rgba(228,0,43,.12);border:1px solid rgba(228,0,43,.4);color:#ff6680;font-size:.85rem;font-weight:900;cursor:pointer;letter-spacing:.3px">
-          ✕ Batter Out (K)
+          ✕ Batter Out (${label})
         </button>
       </div>
     </div>`;
 }
 
-function _resolveDroppedThird(safe) {
+function _resolveDroppedThird(safe, label) {
+  label = label || 'K';
   _liveResetCount();
   if (safe) {
-    // Batter reaches on dropped third — records as reach via dropped K
-    // Treat exactly like ROE for base placement; no out added
     liveAB('K-DS', 'walk');
   } else {
-    liveAB('K', 'out');
+    liveAB(label, 'out');
   }
 }
 
@@ -6200,7 +6337,7 @@ function _publishLiveGame() {
     const parts = (p.name||'').trim().split(/\s+/);
     const first = parts[0]||''; const last = parts.slice(1).join(' ');
     const display = last ? `${first[0].toUpperCase()}. ${last}` : first;
-    return { fmtName:`${display} #${p.jersey||'?'}`, jersey:p.jersey||'?', lastName:last||first };
+    return { fmtName:`${display} #${p.jersey||'?'}`, jersey:p.jersey||'?', shortName:display };
   };
   const resolvePid = pid => {
     if(!pid)return null; const p=S.players.find(x=>x.id===pid);
@@ -6281,23 +6418,20 @@ async function _geocode(addr) {
   } catch { return null; }
 }
 
-async function _fetchForecast(lat, lon, dateStr) {
-  const key = `fc:${lat.toFixed(2)},${lon.toFixed(2)}:${dateStr}`;
+async function _fetchForecast(lat, lon, dateStr, hour) {
+  hour = (hour != null) ? hour : 18;
+  const key = `fc:${lat.toFixed(2)},${lon.toFixed(2)}:${dateStr}:${hour}`;
   if (_wxCache[key]) return _wxCache[key];
   try {
     const r = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-      `&daily=temperature_2m_max,temperature_2m_min,weathercode` +
-      `&temperature_unit=fahrenheit&timezone=auto` +
-      `&start_date=${dateStr}&end_date=${dateStr}&forecast_days=16`
+      `&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit` +
+      `&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`
     );
     const d = await r.json();
-    if (!d.daily?.weathercode?.length) return null;
-    const v = {
-      high: Math.round(d.daily.temperature_2m_max[0]),
-      low:  Math.round(d.daily.temperature_2m_min[0]),
-      code: d.daily.weathercode[0]
-    };
+    if (!d.hourly?.temperature_2m?.length) return null;
+    const i = Math.min(hour, d.hourly.temperature_2m.length - 1);
+    const v = { temp: Math.round(d.hourly.temperature_2m[i]), code: d.hourly.weathercode[i] };
     _wxCache[key] = v;
     return v;
   } catch { return null; }
@@ -6323,20 +6457,24 @@ async function _injectScheduleWeather() {
     if (days > 16) continue;
     const coords = await _geocode(g.field);
     if (!coords) continue;
-    const wx = await _fetchForecast(coords.lat, coords.lon, g.date);
+    const hour = g.time ? parseInt(g.time.split(':')[0], 10) : 18;
+    const wx = await _fetchForecast(coords.lat, coords.lon, g.date, hour);
     if (!wx) continue;
     const el = document.getElementById('wx-' + g.id);
     if (!el) continue;
     const { icon, label } = _wxInfo(wx.code);
-    el.innerHTML  = `${icon} <strong>${wx.high}°</strong>/<span>${wx.low}°</span>`;
-    el.title      = label;
+    const timeLabel = g.time ? `${g.time} game time` : 'approx. 6 PM';
+    el.innerHTML  = `${icon} <strong>${wx.temp}°F</strong>`;
+    el.title      = `${label} · ${timeLabel}`;
     el.style.color = wx.code >= 95 ? 'var(--warn)' : 'var(--muted)';
   }
 }
 
 let _liveWxData = null;
+let _liveWxInterval = null;
 
 async function _fetchLiveWeather(gameId) {
+  if (_liveWxInterval) { clearInterval(_liveWxInterval); _liveWxInterval = null; }
   const g    = S.games?.find(x => x.id === gameId);
   const addr = g?.field;
   const bar  = document.getElementById('live-wx-bar');
@@ -6367,6 +6505,21 @@ async function _fetchLiveWeather(gameId) {
 
   // Re-publish so spectators get the weather update
   _publishLiveGame();
+
+  // Refresh current conditions every 10 minutes while in live mode
+  _liveWxInterval = setInterval(async () => {
+    const wx2 = await _fetchCurrentWx(coords.lat, coords.lon);
+    if (!wx2) return;
+    const { icon: i2, label: l2 } = _wxInfo(wx2.weathercode);
+    _liveWxData = { icon: i2, temp: Math.round(wx2.temperature), label: l2, loc: addr.split(',')[0] };
+    const bar2 = document.getElementById('live-wx-bar');
+    if (bar2) {
+      document.getElementById('live-wx-icon').textContent  = i2;
+      document.getElementById('live-wx-temp').textContent  = _liveWxData.temp + '°F';
+      document.getElementById('live-wx-label').textContent = l2;
+    }
+    _publishLiveGame();
+  }, 10 * 60 * 1000);
 }
 
 function _publishTeamPage() {
@@ -6522,7 +6675,7 @@ function renderSpectatorView(data) {
     if (txt)    txt.textContent = info ? ('#'+info.jersey) : '';
     const lbl = `<span style="color:var(--muted)">${b}:</span>`;
     if (info) {
-      specNameLines.push(`<div style="white-space:nowrap">${lbl} <span style="color:var(--gold)">#${info.jersey} ${info.lastName||''}</span></div>`);
+      specNameLines.push(`<div style="white-space:nowrap">${lbl} <span style="color:var(--gold)">#${info.jersey} ${info.shortName||''}</span></div>`);
     } else {
       specNameLines.push(`<div style="white-space:nowrap;opacity:.35">${lbl}</div>`);
     }
