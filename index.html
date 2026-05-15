@@ -1303,11 +1303,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
               <text id="lb-2B-txt" x="40" y="14" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
               <text id="lb-3B-txt" x="12" y="40" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
             </svg>
-            <div id="live-bases-names" style="display:flex;justify-content:space-between;font-size:.52rem;font-weight:800;color:var(--muted);margin-top:1px;width:76px;margin-left:auto;margin-right:auto;line-height:1.1">
-              <span id="lbn-3B" style="text-align:left;flex:1"></span>
-              <span id="lbn-2B" style="text-align:center;flex:1"></span>
-              <span id="lbn-1B" style="text-align:right;flex:1"></span>
-            </div>
+            <div id="live-bases-names" style="margin-top:4px;width:80px;margin-left:auto;margin-right:auto;min-height:14px"></div>
             <div style="display:flex;gap:4px;margin-top:3px">
               <button class="live-half-btn" onclick="liveUndo()" id="live-undo-half-btn" style="opacity:.5" title="Undo last action">↩</button>
               <button class="live-half-btn" onclick="liveNextInning()">End Half ▶</button>
@@ -4517,23 +4513,24 @@ function renderLiveInning() {
 
 function renderLiveBases() {
   const bases = gdLiveState.bases || {'1B':null,'2B':null,'3B':null};
-  ['1B','2B','3B'].forEach(base => {
+  const listLines = [];
+  ['3B','2B','1B'].forEach(base => {
     const pid  = bases[base];
     const p    = pid ? S.players.find(x => x.id === pid) : null;
     const poly = document.getElementById('lb-' + base);
     const txt  = document.getElementById('lb-' + base + '-txt');
-    const lbl  = document.getElementById('lbn-' + base);
     if (poly) {
       poly.style.fill   = pid ? 'var(--accent)' : 'var(--surface2)';
       poly.style.stroke = pid ? 'var(--accent)' : 'var(--border)';
     }
     if (txt) txt.textContent = p ? ('#' + (p.jersey || '?')) : '';
-    if (lbl) {
-      const first = p ? p.name.split(' ')[0] : '';
-      lbl.textContent = first;
-      lbl.style.color = pid ? 'var(--gold)' : 'var(--muted)';
+    if (pid && p) {
+      const last = p.name.split(' ').pop();
+      listLines.push(`<div style="color:var(--gold);white-space:nowrap">${base}: <span style="color:var(--text)">#${p.jersey||'?'} ${last}</span></div>`);
     }
   });
+  const nameDiv = document.getElementById('live-bases-names');
+  if (nameDiv) nameDiv.innerHTML = listLines.join('');
 }
 
 let _liveShowMore = false;
@@ -4800,8 +4797,8 @@ function livePitch(type) {
   const count = gdLiveState.count = gdLiveState.count || {balls:0, strikes:0};
   const pid   = gdFieldAssign && gdFieldAssign['P'];
 
-  // Increment pitcher total pitch count
-  if (pid) {
+  // Increment pitcher total pitch count (only when we are fielding)
+  if (pid && !_gdWeAreBatting()) {
     gdLiveState.pitchCounts = gdLiveState.pitchCounts || {};
     gdLiveState.pitchCounts[pid] = (gdLiveState.pitchCounts[pid]||0) + 1;
     // Track balls/strikes per pitcher for stats
