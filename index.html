@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Moneyball</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='32' fill='%23111'/><circle cx='32' cy='32' r='27' fill='%23fafafa' stroke='%23ddd' stroke-width='.8'/><path d='M33 5C4 14 4 50 31 59' stroke='%23cc1010' stroke-width='2.4' fill='none' stroke-linecap='round'/><path d='M31 5C60 14 60 50 33 59' stroke='%23cc1010' stroke-width='2.4' fill='none' stroke-linecap='round'/><path d='M33 5C4 14 4 50 31 59' stroke='%23cc1010' stroke-width='.9' fill='none' stroke-linecap='round' stroke-dasharray='3 4.5' stroke-dashoffset='1'/><path d='M31 5C60 14 60 50 33 59' stroke='%23cc1010' stroke-width='.9' fill='none' stroke-linecap='round' stroke-dasharray='3 4.5' stroke-dashoffset='1'/></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='32' fill='%23111'/><circle cx='32' cy='32' r='27' fill='%23fafafa' stroke='%23ddd' stroke-width='.8'/><path d='M33 5C4 14 4 50 31 59' stroke='%23cc1010' stroke-width='2.4' fill='none' stroke-linecap='round'/><path d='M31 5C60 14 60 50 33 59' stroke='%23cc1010' stroke-width='2.4' fill='none' stroke-linecap='round'/></svg>">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -217,7 +219,10 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .mode-btn{flex:1;padding:8px;border:none;background:none;color:var(--muted);font-size:.7rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:all .15s}
 .mode-btn.on{background:var(--accent);color:#fff}
 /* SCROLL HINT */
-.scroll-x{overflow-x:auto}
+.scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll-x table.tbl th:first-child,.scroll-x table.tbl td:first-child{position:sticky;left:0;z-index:2;background:var(--surface);box-shadow:2px 0 6px rgba(0,0,0,.3)}
+.scroll-x table.tbl thead th:first-child{z-index:3}
+.scroll-x table.tbl tr:hover td:first-child{background:rgba(255,255,255,.05)}
 /* HR RULES */
 .rules-box{background:#000;border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:.78rem;color:var(--muted);line-height:1.7}
 .rules-box b{color:var(--text)}
@@ -1397,7 +1402,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
 
         <!-- Game events strip -->
         <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-          <button onclick="openModal('game-events-modal')" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:3px;cursor:pointer;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px">⚡ Game Events</button>
+          <button onclick="openModal('game-events-modal')" style="background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.4);color:var(--warn);padding:6px 14px;border-radius:4px;cursor:pointer;font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px">⚡ Game Events</button>
         </div>
 
         <!-- At-bat card (batting mode) -->
@@ -3531,6 +3536,13 @@ function fieldLastName(p) {
   const parts = (p.name || '').trim().split(/\s+/);
   return parts.length > 1 ? parts[parts.length - 1] : parts[0];
 }
+// Returns "F. LastName" — first initial + last name for fielding displays
+function fieldShortName(p) {
+  const parts = (p.name || '').trim().split(/\s+/);
+  const first = parts[0] || '';
+  const last  = parts.slice(1).join(' ');
+  return last ? `${first[0].toUpperCase()}. ${last}` : first;
+}
 
 function renderField(present) {
   const field = document.getElementById('field-bg');
@@ -3542,7 +3554,7 @@ function renderField(present) {
         ondragover="fieldDragOver(event,'${pos}')" ondrop="fieldDrop(event,'${pos}')" ondragleave="fieldDragLeave(event,'${pos}')"
         onclick="fieldSlotClick('${pos}')">
         <div class="pos-lbl">${fp.label}</div>
-        <div class="pos-player">${assignedP ? fieldLastName(assignedP) : ''}</div>
+        <div class="pos-player">${assignedP ? '#'+(assignedP.jersey||'?')+' '+fieldLastName(assignedP) : ''}</div>
       </div>
     </div>`;
   }).join('');
@@ -3565,7 +3577,7 @@ function renderField(present) {
              background:${isSelected?'rgba(var(--accent-rgb,228,0,43),.18)':'rgba(255,255,255,.08)'}">
       <div style="display:flex;align-items:center;gap:4px">
         <div class="chip-j">${p.jersey||'?'}</div>
-        <div style="font-size:.72rem;font-weight:700">${fieldLastName(p)}</div>
+        <div style="font-size:.72rem;font-weight:700">${fieldShortName(p)}</div>
       </div>
       <div style="font-size:.58rem;color:${isSelected?'var(--accent)':'var(--muted)'};font-weight:600;letter-spacing:.3px">${posStr}</div>
     </div>`;
@@ -4694,7 +4706,8 @@ function gdStartLive() {
                   pulledPitchers:[], bases:{'1B':null,'2B':null,'3B':null}, stats:{},
                   basesOwner:{'1B':null,'2B':null,'3B':null}, isHome,
                   count:{balls:0, strikes:0},
-                  oppBases:{'1B':null,'2B':null,'3B':null}, oppBatterNum:0 };
+                  oppBases:{'1B':null,'2B':null,'3B':null}, oppBatterNum:0,
+                  pitcherOuts:{} };
   _liveTab = 'lineup';
   _oppLiveData = null;
   _subscribeOpponent(g?.opponentCode||null);
@@ -4928,6 +4941,10 @@ function renderLivePitcher() {
   const pct       = Math.min(100, thrown / limit * 100);
   const color     = pct<60?'var(--ok)':pct<85?'var(--warn)':'var(--danger)';
   const remaining = Math.max(0, limit - thrown);
+  const outLimit  = R.pitchOuts || 0; // e.g. 9 for 10U Sec 1
+  const pitcherOutsRec = outLimit ? ((gdLiveState.pitcherOuts && gdLiveState.pitcherOuts[pitcher.id]) || 0) : 0;
+  const outLimitReached = outLimit && pitcherOutsRec >= outLimit;
+  const outLimitWarn    = outLimit && !outLimitReached && pitcherOutsRec >= outLimit - 3;
   const fielding  = !_gdWeAreBatting();
   const count     = gdLiveState.count || {balls:0, strikes:0};
 
@@ -4996,6 +5013,7 @@ function renderLivePitcher() {
         <div style="display:flex;gap:10px;align-items:center;margin-top:2px">
           <span class="live-pitch-count" style="color:${color}">${thrown} pitches · ${remaining} left</span>
           <span style="font-size:.6rem;color:var(--muted)">${bs.b}B · ${bs.s}K · ${bs.f}F</span>
+          ${outLimit ? `<span style="font-size:.6rem;font-weight:900;color:${outLimitReached?'var(--danger)':outLimitWarn?'var(--warn)':'var(--muted)'}">Outs: ${pitcherOutsRec}/${outLimit}</span>` : ''}
         </div>
       </div>
       <div class="live-pitch-btns">
@@ -5006,7 +5024,9 @@ function renderLivePitcher() {
     ${fieldingSection}
     ${oppOutcomeSection}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:${fielding?4:10}px">
-      ${pct>=100?'<div class="alert alert-danger" style="padding:5px 10px;font-size:.72rem;font-weight:900;flex:1;margin-right:8px">🛑 Limit reached — change pitcher now</div>':
+      ${outLimitReached?'<div class="alert alert-danger" style="padding:5px 10px;font-size:.72rem;font-weight:900;flex:1;margin-right:8px">🛑 Out limit reached — change pitcher</div>':
+        pct>=100?'<div class="alert alert-danger" style="padding:5px 10px;font-size:.72rem;font-weight:900;flex:1;margin-right:8px">🛑 Pitch limit reached — change pitcher</div>':
+        outLimitWarn?`<div class="alert alert-warn" style="padding:5px 10px;font-size:.72rem;flex:1;margin-right:8px">⚠ ${outLimit-pitcherOutsRec} outs left</div>`:
         pct>=85?`<div class="alert alert-warn" style="padding:5px 10px;font-size:.72rem;flex:1;margin-right:8px">⚠ ${remaining} pitches left</div>`:'<div style="flex:1"></div>'}
       <button class="live-swap-btn" onclick="livePitcherSwap()">Change Pitcher ↕</button>
     </div>`;
@@ -5045,8 +5065,7 @@ function renderLiveField() {
       <div class="live-pos-badge">${pos}</div>
       ${p ? playerAvatar(p, 28) : `<div style="width:28px;height:28px;border-radius:50%;background:var(--surface2);border:1px dashed var(--border);flex-shrink:0"></div>`}
       <div style="flex:1;min-width:0">
-        <div style="font-size:.82rem;font-weight:700;color:${p?'var(--text)':'var(--muted)'}">${p ? p.name : 'Unassigned'}</div>
-        ${p?`<div style="font-size:.62rem;color:var(--muted)">#${p.jersey||'?'}</div>`:''}
+        <div style="font-size:.82rem;font-weight:700;color:${p?'var(--text)':'var(--muted)'}">${p ? '#'+(p.jersey||'?')+' '+fieldShortName(p) : 'Unassigned'}</div>
       </div>
       <button class="live-change-btn" onclick="${isP?'livePitcherSwap()':'liveFieldSubModal(\''+pos+'\')'}">${isP?'Change P ↕':'Change ↕'}</button>
     </div>`;
@@ -5285,6 +5304,7 @@ function _resolveFieldDroppedThird(safe, label) {
 }
 
 function _liveFieldOut(label) {
+  _liveFieldAddPitcherOuts(1);
   gdLiveState.outs = (gdLiveState.outs || 0) + 1;
   gdLiveState.log = gdLiveState.log || [];
   gdLiveState.log.push({ type:'runner_event', inning:gdLiveState.inning, half:gdLiveState.topBottom,
@@ -5311,6 +5331,22 @@ function liveWildPitch() {
   renderLivePitcher(); gdSaveState(); _publishLiveGame();
 }
 // ── Opponent runner management (fielding, no linked opponent) ─
+// Counts 1 pitch on the current pitcher for a fielding outcome (raw total only — B/S/F tracked via pitch buttons)
+function _liveFieldCountPitch() {
+  const pid = gdFieldAssign && gdFieldAssign['P'];
+  if (!pid) return;
+  gdLiveState.pitchCounts = gdLiveState.pitchCounts || {};
+  gdLiveState.pitchCounts[pid] = (gdLiveState.pitchCounts[pid] || 0) + 1;
+}
+
+// Tracks outs recorded by the current pitcher (for out-based pitch limits like 10U = 9 outs)
+function _liveFieldAddPitcherOuts(n) {
+  const pid = gdFieldAssign && gdFieldAssign['P'];
+  if (!pid) return;
+  gdLiveState.pitcherOuts = gdLiveState.pitcherOuts || {};
+  gdLiveState.pitcherOuts[pid] = (gdLiveState.pitcherOuts[pid] || 0) + (n || 1);
+}
+
 function _liveOppBaseLog(extraFields) {
   const entry = { type:'opp_ab',
     prevOppBases:{...(gdLiveState.oppBases||{})},
@@ -5366,6 +5402,8 @@ function _liveFieldBatterReaches(label) {
   }
   gdLiveState.themScore = (gdLiveState.themScore || 0) + runs;
   const runsStr = runs ? ` (${runs} score${runs>1?'s':''})` : '';
+  // Count the pitch that caused this plate appearance result
+  _liveFieldCountPitch();
   _liveOppBaseLog({ result: label + runsStr, label });
   _liveResetCount();
   const ballInPlay = new Set(['1B','2B','3B','HR']);
@@ -5375,6 +5413,8 @@ function _liveFieldBatterReaches(label) {
 }
 
 function _liveFieldBatterOut(label, nOuts) {
+  _liveFieldCountPitch(); // ball put in play — counts as a pitch
+  _liveFieldAddPitcherOuts(nOuts); // credit outs to current pitcher
   _liveOppBaseLog({ result: label, label });
   gdLiveState.outs = Math.min(3, (gdLiveState.outs || 0) + nOuts);
   if (gdLiveState.outs >= 3) {
@@ -5389,6 +5429,8 @@ function _liveFieldBatterOut(label, nOuts) {
 }
 
 function _liveFieldBatterSF() {
+  _liveFieldCountPitch(); // sac fly — ball in play
+  _liveFieldAddPitcherOuts(1); // sac fly is an out for the pitcher
   let runs = 0;
   gdLiveState.oppBases = gdLiveState.oppBases || {'1B':null,'2B':null,'3B':null};
   if (gdLiveState.oppBases['3B']) {
@@ -5423,6 +5465,7 @@ function openFieldErrorPicker() {
 }
 
 function _assignFieldError(pos) {
+  _liveFieldCountPitch(); // ball was put in play (error on the fielder)
   const pid = gdFieldAssign && gdFieldAssign[pos];
   if (pid) {
     gdLiveState.stats = gdLiveState.stats || {};
@@ -5537,6 +5580,24 @@ function _showFieldingPostPlay(label) {
   const log = gdLiveState.log || [];
   _ppEntry = log.length ? log[log.length - 1] : { type:'opp_field' };
   sheet.classList.add('open');
+}
+
+function _oppRmAdvButtons(base) {
+  const toBase = base === '1B' ? '2B' : base === '2B' ? '3B' : null;
+  return `<div class="rm-section-lbl">Advance</div>
+    <div class="rm-btn-grid">
+      ${toBase ? `<button class="rm-btn score" onclick="liveOppRunnerAdvance('${base}','Adv');closeRunnerModal()">▶ Advance<br><span style="font-size:.6rem;font-weight:600;opacity:.8">→ ${toBase}</span></button>` : ''}
+      <button class="rm-btn score" onclick="liveOppRunnerScore('${base}');closeRunnerModal()">🏠 Scores<br><span style="font-size:.6rem;opacity:.7">Runs</span></button>
+    </div>`;
+}
+function _oppRmOutButtons(base) {
+  return `<div class="rm-section-lbl" style="color:var(--danger)">Out</div>
+    <div class="rm-btn-grid">
+      <button class="rm-btn danger" onclick="liveOppRunnerOut('${base}','Tagged');closeRunnerModal()">Tagged Out</button>
+      <button class="rm-btn danger" onclick="liveOppRunnerOut('${base}','Thrown');closeRunnerModal()">Thrown Out</button>
+      <button class="rm-btn danger" onclick="liveOppRunnerOut('${base}','PIK');closeRunnerModal()">Picked Off</button>
+      <button class="rm-btn danger" onclick="liveOppRunnerOut('${base}','Out');closeRunnerModal()">Other Out</button>
+    </div>`;
 }
 
 // ── Game event controls ───────────────────────────────────────
@@ -6043,11 +6104,14 @@ function _liveBaseLog(extraFields) {
 }
 
 function liveRunnerAction(base) {
-  // When fielding, tap on base opens opp runner controls inline in pitcher card
+  // When fielding, tap on occupied base opens the runner action modal for opp runners
   if (!_gdWeAreBatting()) {
     const oppBases = gdLiveState.oppBases || {'1B':null,'2B':null,'3B':null};
-    if (!oppBases[base]) return; // empty base while fielding — ignore tap
-    renderLivePitcher(); // re-render to show runner controls (already rendered, just scroll)
+    const runner   = oppBases[base];
+    if (!runner) return; // empty base — ignore tap
+    document.getElementById('runner-modal-title').textContent = `Opp. Runner ${runner.n} — ${base}`;
+    document.getElementById('runner-modal-body').innerHTML = _oppRmAdvButtons(base) + _oppRmOutButtons(base);
+    document.getElementById('runner-modal').classList.add('open');
     return;
   }
   const bases = gdLiveState.bases = gdLiveState.bases || {'1B':null,'2B':null,'3B':null};
@@ -6300,7 +6364,7 @@ function liveSubBatterModal(slotIdx) { liveSubLineupSlot(slotIdx); }
 function liveFieldSubModal(pos) {
   const present = S.players.filter(p => gdPresent.has(p.id));
   const cur     = gdFieldAssign[pos];
-  const opts    = present.map(p=>`<option value="${p.id}" ${p.id===cur?'selected':''}>${p.name} (#${p.jersey||'?'}) · ${(p.positions||[]).slice(0,2).join('/')}</option>`).join('');
+  const opts    = present.map(p=>`<option value="${p.id}" ${p.id===cur?'selected':''}>#${p.jersey||'?'} ${fieldShortName(p)} · ${(p.positions||[]).slice(0,2).join('/')}</option>`).join('');
   _openLiveModal(
     `Assign ${pos}`,
     `<select id="sub-target-sel" style="width:100%;background:#000;border:1px solid var(--border);color:#fff;padding:10px;border-radius:3px;font-size:.9rem">${opts}</select>`,
