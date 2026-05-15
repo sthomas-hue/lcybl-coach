@@ -199,6 +199,12 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .widget-lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:800}
 .widget-val{font-size:1.9rem;font-weight:900;margin-top:4px;line-height:1;letter-spacing:-1px}
 .widget-sub{font-size:.68rem;color:var(--muted);margin-top:4px;font-weight:600}
+/* WEATHER */
+.game-wx{font-size:.7rem;font-weight:700;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:3px}
+.game-dir{display:inline-flex;align-items:center;padding:3px 7px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--muted);font-size:.65rem;font-weight:800;cursor:pointer;text-decoration:none;white-space:nowrap;transition:border-color .15s,color .15s}
+.game-dir:hover{border-color:var(--text);color:var(--text)}
+.live-wx-bar{background:#0c0c0c;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:5px 14px;margin-top:-9px;margin-bottom:8px;font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+.live-wx-bar span{color:var(--text);font-weight:700}
 /* GAME DAY MODE TOGGLE */
 .mode-toggle{display:flex;gap:0;background:#000;border:1px solid var(--border);border-radius:var(--radius);padding:3px;margin-bottom:16px}
 .mode-btn{flex:1;padding:8px;border:none;background:none;color:var(--muted);font-size:.7rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:all .15s}
@@ -1310,6 +1316,14 @@ main{padding:16px;max-width:860px;margin:0 auto}
             </div>
             <button class="live-half-btn" onclick="openShareSheet()" title="Share live view" style="margin-top:5px;font-size:.7rem;padding:4px 10px">📤 Share</button>
           </div>
+        </div>
+
+        <!-- Weather strip (shown when field address is known) -->
+        <div class="live-wx-bar" id="live-wx-bar" style="display:none">
+          <span id="live-wx-icon">🌡</span>
+          <span id="live-wx-temp">—</span>
+          <span id="live-wx-label" style="color:var(--muted)"></span>
+          <span style="margin-left:auto;color:var(--muted)" id="live-wx-loc"></span>
         </div>
 
         <!-- At-bat card (batting mode) -->
@@ -2517,8 +2531,15 @@ function renderSchedule() {
     return;
   }
   const sorted = [...S.games].sort((a,b)=>a.date.localeCompare(b.date));
+  const todayStr = today();
   list.innerHTML = sorted.map(g => {
     const d = new Date(g.date+'T00:00:00');
+    const isUpcoming = g.date >= todayStr;
+    const daysOut = Math.ceil((d - new Date()) / 86400000);
+    const canWx = isUpcoming && !!g.field && daysOut <= 16;
+    const dirUrl = g.field
+      ? 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(g.field)
+      : null;
     let res = '';
     if (g.result) {
       const cls = g.result.runs>g.result.opp?'win':g.result.runs<g.result.opp?'loss':'tie';
@@ -2526,7 +2547,7 @@ function renderSchedule() {
         <div class="game-result ${cls}">${g.result.runs}–${g.result.opp}</div>
         <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openStatsModal('${g.id}')">Edit Stats</button>
       </div>`;
-    } else if (g.date < today()) {
+    } else if (g.date < todayStr) {
       res = `<button class="btn btn-warn btn-sm" onclick="event.stopPropagation();openStatsModal('${g.id}')">Log Stats</button>`;
     } else {
       res = `<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openStatsModal('${g.id}')">Log Stats</button>`;
@@ -2536,10 +2557,15 @@ function renderSchedule() {
       <div class="game-info">
         <div class="game-opp">vs ${g.opponent}</div>
         <div class="game-meta">${g.location} · ${g.time||'TBD'}${g.field?' · '+g.field:''}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap">
+          ${canWx ? `<div id="wx-${g.id}" class="game-wx" title="Loading forecast…">🌡 —</div>` : ''}
+          ${dirUrl ? `<a class="game-dir" href="${dirUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Directions to ${g.field}">📍 Directions</a>` : ''}
+        </div>
       </div>
       ${res}
     </div>`;
   }).join('');
+  if (sorted.some(g => g.field && g.date >= todayStr)) _injectScheduleWeather();
 }
 
 function openGameModal(id) {
@@ -2911,6 +2937,7 @@ function gdRestoreState() {
         _subscribeOpponent(g2?.opponentCode||null);
         renderGameCard();
         renderLiveMode();
+        _fetchLiveWeather(sel.value);
       }
     } else {
       gdGoStep(1, true);
@@ -4391,6 +4418,7 @@ function gdStartLive() {
   renderLiveMode();
   gdGoStep(5);
   _publishLiveGame();
+  _fetchLiveWeather(selGame);
 }
 
 function _gdWeAreBatting() {
@@ -5176,8 +5204,8 @@ function liveUndo() {
     gdLiveState.topBottom = entry.prevHalf;
     gdLiveState.outs      = Math.max(0, entry.prevOuts);
     gdLiveState.bases     = entry.prevBases || {'1B':null,'2B':null,'3B':null};
-    renderLiveInning();
-    renderLiveBases();
+    gdLiveState.count     = {balls:0, strikes:0};
+    renderLiveMode();
   } else if (entry.type === 'ab') {
     gdLiveState.batterIdx = entry.slotIdx;
     gdLiveState.bases     = entry.prevBases || {'1B':null,'2B':null,'3B':null};
@@ -5190,6 +5218,7 @@ function liveUndo() {
       const last = [...log].reverse().find(e => e.type==='ab' && e.slotIdx===entry.slotIdx);
       if (last) { const m={hit:'b-green',walk:'b-yellow',out:'b-red',neutral:'b-gray'}; gdLiveState.lastResult[entry.slotIdx]={label:last.result,cls:m[last.cls]||'b-gray'}; }
     }
+    _liveResetCount();
     renderLiveAB();
     renderLiveLineup();
     renderLiveBases();
@@ -5200,8 +5229,11 @@ function liveUndo() {
     if (entry.prevOuts  !== undefined) gdLiveState.outs    = entry.prevOuts;
     renderLiveInning();
     renderLiveBases();
+  } else {
+    renderLiveAB();
   }
-  else { renderLiveAB(); }
+  gdSaveState();
+  _publishLiveGame();
 }
 
 function _liveFmtName(p) {
@@ -6196,6 +6228,117 @@ function _publishLiveGame() {
     isLive:   true,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(e=>console.warn('Publish live:',e));
+}
+
+// ============================================================
+// WEATHER  (Open-Meteo + Nominatim — no API keys required)
+// ============================================================
+const _wxCache = {};
+
+function _wxInfo(code) {
+  if (code === 0)                    return { icon:'☀️',  label:'Clear' };
+  if (code <= 2)                     return { icon:'🌤',  label:'Mostly Clear' };
+  if (code === 3)                    return { icon:'☁️',  label:'Overcast' };
+  if (code <= 48)                    return { icon:'🌫',  label:'Fog' };
+  if (code <= 55)                    return { icon:'🌦',  label:'Drizzle' };
+  if (code <= 65)                    return { icon:'🌧',  label:'Rain' };
+  if (code <= 77)                    return { icon:'🌨',  label:'Snow' };
+  if (code <= 82)                    return { icon:'🌦',  label:'Showers' };
+  if (code >= 95)                    return { icon:'⛈',   label:'Thunderstorm' };
+  return                                    { icon:'🌡',  label:'Weather' };
+}
+
+async function _geocode(addr) {
+  const key = 'geo:' + addr;
+  if (_wxCache[key]) return _wxCache[key];
+  try {
+    const r = await fetch(
+      'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' +
+      encodeURIComponent(addr),
+      { headers:{ 'Accept-Language':'en' } }
+    );
+    const d = await r.json();
+    if (!d.length) return null;
+    const v = { lat: parseFloat(d[0].lat), lon: parseFloat(d[0].lon) };
+    _wxCache[key] = v;
+    return v;
+  } catch { return null; }
+}
+
+async function _fetchForecast(lat, lon, dateStr) {
+  const key = `fc:${lat.toFixed(2)},${lon.toFixed(2)}:${dateStr}`;
+  if (_wxCache[key]) return _wxCache[key];
+  try {
+    const r = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&daily=temperature_2m_max,temperature_2m_min,weathercode` +
+      `&temperature_unit=fahrenheit&timezone=auto` +
+      `&start_date=${dateStr}&end_date=${dateStr}&forecast_days=16`
+    );
+    const d = await r.json();
+    if (!d.daily?.weathercode?.length) return null;
+    const v = {
+      high: Math.round(d.daily.temperature_2m_max[0]),
+      low:  Math.round(d.daily.temperature_2m_min[0]),
+      code: d.daily.weathercode[0]
+    };
+    _wxCache[key] = v;
+    return v;
+  } catch { return null; }
+}
+
+async function _fetchCurrentWx(lat, lon) {
+  try {
+    const r = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&current_weather=true&temperature_unit=fahrenheit`
+    );
+    const d = await r.json();
+    return d.current_weather || null;
+  } catch { return null; }
+}
+
+async function _injectScheduleWeather() {
+  const todayStr = today();
+  for (const g of S.games || []) {
+    if (!g.field || g.date < todayStr) continue;
+    const ms   = new Date(g.date + 'T00:00:00') - new Date();
+    const days = Math.ceil(ms / 86400000);
+    if (days > 16) continue;
+    const coords = await _geocode(g.field);
+    if (!coords) continue;
+    const wx = await _fetchForecast(coords.lat, coords.lon, g.date);
+    if (!wx) continue;
+    const el = document.getElementById('wx-' + g.id);
+    if (!el) continue;
+    const { icon, label } = _wxInfo(wx.code);
+    el.innerHTML  = `${icon} <strong>${wx.high}°</strong>/<span>${wx.low}°</span>`;
+    el.title      = label;
+    el.style.color = wx.code >= 95 ? 'var(--warn)' : 'var(--muted)';
+  }
+}
+
+async function _fetchLiveWeather(gameId) {
+  const g    = S.games?.find(x => x.id === gameId);
+  const addr = g?.field;
+  const bar  = document.getElementById('live-wx-bar');
+  if (!bar) return;
+  if (!addr) { bar.style.display = 'none'; return; }
+
+  bar.style.display = 'flex';
+  document.getElementById('live-wx-temp').textContent  = '…';
+  document.getElementById('live-wx-label').textContent = '';
+  document.getElementById('live-wx-loc').textContent   = addr.split(',')[0];
+
+  const coords = await _geocode(addr);
+  if (!coords) { bar.style.display = 'none'; return; }
+  const wx = await _fetchCurrentWx(coords.lat, coords.lon);
+  if (!wx)  { bar.style.display = 'none'; return; }
+
+  const { icon, label } = _wxInfo(wx.weathercode);
+  document.getElementById('live-wx-icon').textContent  = icon;
+  document.getElementById('live-wx-temp').textContent  = Math.round(wx.temperature) + '°F';
+  document.getElementById('live-wx-label').textContent = label;
 }
 
 function _publishTeamPage() {
