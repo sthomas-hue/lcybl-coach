@@ -367,7 +367,9 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .spec-live-badge.delayed{color:var(--warn)}
 .spec-live-badge.ended{color:var(--muted);animation:none}
 .spec-live-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:specPulse 1.4s ease-in-out infinite}
-.spec-live-badge.ended .spec-live-dot{animation:none}
+.spec-live-badge.ended .spec-live-dot,.spec-live-badge.delayed .spec-live-dot{animation:none}
+.spec-delay-banner{background:rgba(245,166,35,.1);border-top:2px solid rgba(245,166,35,.5);border-bottom:2px solid rgba(245,166,35,.5);padding:11px 16px;display:flex;align-items:center;justify-content:center;gap:9px;font-size:.78rem;font-weight:900;color:var(--warn);text-transform:uppercase;letter-spacing:.8px;animation:delayPulse 2.5s ease-in-out infinite}
+@keyframes delayPulse{0%,100%{opacity:1}50%{opacity:.65}}
 .live-status-banner{background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.4);border-radius:var(--radius);padding:8px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 @keyframes specPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.65)}}
 .spec-diamond-wrap{padding:14px 0 8px;display:flex;justify-content:center;flex-shrink:0}
@@ -848,6 +850,11 @@ main{padding:16px;max-width:860px;margin:0 auto}
     <span id="spec-wx-temp" style="color:var(--text);font-weight:700"></span>
     <span id="spec-wx-label"></span>
     <span id="spec-wx-loc" style="margin-left:auto;font-size:.62rem"></span>
+  </div>
+  <!-- Delay / status banner — shown when game is not live -->
+  <div class="spec-delay-banner" id="spec-delay-banner" style="display:none">
+    <span id="spec-delay-icon">⏸</span>
+    <span id="spec-delay-text">Game Delayed</span>
   </div>
   <div class="spec-diamond-wrap" style="gap:14px">
     <svg id="spec-diamond-svg" viewBox="0 0 80 68" width="180" height="153" style="overflow:visible">
@@ -7406,14 +7413,36 @@ function renderSpectatorView(data) {
     (data.topBottom==='top'?'▲ ':'▼ ') + (ord[(data.inning||1)-1]||(data.inning||1)+'th');
   [0,1,2].forEach(i => document.getElementById('spec-out'+i).classList.toggle('on', i<(data.outs||0)));
 
-  // Status badge
+  // Status badge + delay banner
   const statusBadge = document.getElementById('spec-status-badge');
   const statusText  = document.getElementById('spec-status-text');
+  const delayBanner = document.getElementById('spec-delay-banner');
+  const delayIcon   = document.getElementById('spec-delay-icon');
+  const delayText   = document.getElementById('spec-delay-text');
   if (statusBadge && statusText) {
     const st = data.gameStatus || 'live';
     statusBadge.className = 'spec-live-badge' + (st==='delayed'?' delayed':st==='live'?'':' ended');
     const labels = { live:'LIVE', delayed:'DELAYED', postponed:'POSTPONED', cancelled:'CANCELLED', ended:'FINAL' };
     statusText.textContent = labels[st] || 'LIVE';
+    // Drive the prominent delay / status banner
+    if (delayBanner) {
+      const bannerCfg = {
+        delayed:   { show:true,  icon:'⏸',  text:'Game Delayed — Weather', color:'var(--warn)' },
+        postponed: { show:true,  icon:'📅', text:'Game Postponed',          color:'var(--muted)' },
+        cancelled: { show:true,  icon:'✕',  text:'Game Cancelled',          color:'var(--danger)' },
+        ended:     { show:false, icon:'',   text:'',                        color:'' },
+        live:      { show:false, icon:'',   text:'',                        color:'' },
+      };
+      const cfg = bannerCfg[st] || bannerCfg.live;
+      delayBanner.style.display = cfg.show ? 'flex' : 'none';
+      if (cfg.show) {
+        delayBanner.style.color      = cfg.color;
+        delayBanner.style.borderColor = cfg.color === 'var(--warn)' ? 'rgba(245,166,35,.5)' : 'rgba(136,136,136,.3)';
+        delayBanner.style.background  = cfg.color === 'var(--warn)' ? 'rgba(245,166,35,.1)' : 'rgba(136,136,136,.06)';
+        if (delayIcon) delayIcon.textContent = cfg.icon;
+        if (delayText) delayText.textContent = cfg.text;
+      }
+    }
   }
 
   // Bases diamond — animate runners before updating polygons
