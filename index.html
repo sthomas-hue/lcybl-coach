@@ -2582,7 +2582,7 @@ function renderSchedule() {
     const d = new Date(g.date+'T00:00:00');
     const isUpcoming = g.date >= todayStr;
     const daysOut = Math.ceil((d - new Date()) / 86400000);
-    const canWx = isUpcoming && !!g.field && daysOut <= 16;
+    const canWx = !!g.field && (!isUpcoming || daysOut <= 16);
     const dirUrl = g.field
       ? 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(g.field)
       : null;
@@ -6549,25 +6549,51 @@ async function _fetchCurrentWx(lat, lon) {
   } catch { return null; }
 }
 
+async function _fetchHistorical(lat, lon, dateStr, hour) {
+  hour = (hour != null) ? hour : 18;
+  const key = `hist:${lat.toFixed(2)},${lon.toFixed(2)}:${dateStr}:${hour}`;
+  if (_wxCache[key]) return _wxCache[key];
+  try {
+    const r = await fetch(
+      `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}` +
+      `&hourly=temperature_2m,weathercode&temperature_unit=fahrenheit` +
+      `&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`
+    );
+    const d = await r.json();
+    if (!d.hourly?.temperature_2m?.length) return null;
+    const i = Math.min(hour, d.hourly.temperature_2m.length - 1);
+    const v = { temp: Math.round(d.hourly.temperature_2m[i]), code: d.hourly.weathercode[i] };
+    _wxCache[key] = v;
+    return v;
+  } catch { return null; }
+}
+
 async function _injectScheduleWeather() {
   const todayStr = today();
   for (const g of S.games || []) {
-    if (!g.field || g.date < todayStr) continue;
-    const ms   = new Date(g.date + 'T00:00:00') - new Date();
-    const days = Math.ceil(ms / 86400000);
-    if (days > 16) continue;
-    const coords = await _geocode(g.field);
-    if (!coords) continue;
-    const hour = g.time ? parseInt(g.time.split(':')[0], 10) : 18;
-    const wx = await _fetchForecast(coords.lat, coords.lon, g.date, hour);
-    if (!wx) continue;
+    if (!g.field) continue;
     const el = document.getElementById('wx-' + g.id);
     if (!el) continue;
+    const isPast  = g.date < todayStr;
+    const daysOut = Math.ceil((new Date(g.date + 'T00:00:00') - new Date()) / 86400000);
+    if (!isPast && daysOut > 16) { el.style.display = 'none'; continue; }
+    const coords = await _geocode(g.field);
+    if (!coords) { el.style.display = 'none'; continue; }
+    const hour = g.time ? parseInt(g.time.split(':')[0], 10) : 18;
+    let wx;
+    if (isPast) {
+      wx = await _fetchHistorical(coords.lat, coords.lon, g.date, hour);
+      if (!wx) wx = await _fetchForecast(coords.lat, coords.lon, g.date, hour);
+    } else {
+      wx = await _fetchForecast(coords.lat, coords.lon, g.date, hour);
+    }
+    if (!wx) { el.style.display = 'none'; continue; }
     const { icon, label } = _wxInfo(wx.code);
     const timeLabel = g.time ? `${g.time} game time` : 'approx. 6 PM';
-    el.innerHTML  = `${icon} <strong>${wx.temp}°F</strong>`;
-    el.title      = `${label} · ${timeLabel}`;
-    el.style.color = wx.code >= 95 ? 'var(--warn)' : 'var(--muted)';
+    el.innerHTML   = `${icon} <strong>${wx.temp}°F</strong>`;
+    el.title       = `${label} · ${isPast ? 'recorded at game time' : timeLabel}`;
+    el.style.color  = wx.code >= 95 ? 'var(--warn)' : 'var(--muted)';
+    el.style.display = '';
   }
 }
 
