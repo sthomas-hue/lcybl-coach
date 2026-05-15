@@ -832,7 +832,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
     <span id="spec-wx-label"></span>
     <span id="spec-wx-loc" style="margin-left:auto;font-size:.62rem"></span>
   </div>
-  <div class="spec-diamond-wrap">
+  <div class="spec-diamond-wrap" style="gap:14px">
     <svg id="spec-diamond-svg" viewBox="0 0 80 68" width="180" height="153" style="overflow:visible">
       <line x1="40" y1="62" x2="68" y2="36" stroke="var(--border)" stroke-width="1.2"/>
       <line x1="68" y1="36" x2="40" y2="10" stroke="var(--border)" stroke-width="1.2"/>
@@ -846,6 +846,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
       <text id="sd-2B-txt" x="40" y="14" text-anchor="middle" fill="#fff" font-size="7" font-weight="900" pointer-events="none"></text>
       <text id="sd-3B-txt" x="12" y="40" text-anchor="middle" fill="#fff" font-size="7" font-weight="900" pointer-events="none"></text>
     </svg>
+    <div id="spec-bases-names" style="font-size:.82rem;font-weight:700;line-height:2.1;text-align:left;min-width:100px"></div>
   </div>
   <!-- Pitcher section — only shown when our team is fielding -->
   <div class="spec-strips" id="spec-pitcher-section" style="display:none">
@@ -1290,20 +1291,22 @@ main{padding:16px;max-width:860px;margin:0 auto}
               <div class="live-out-dot" id="live-out2" onclick="liveOuts(2)" title="Out 3"></div>
             </div>
             <!-- Base diamond -->
-            <svg class="live-bases-svg" viewBox="0 0 80 68" width="76" height="64">
-              <line x1="40" y1="62" x2="68" y2="36" stroke="var(--border)" stroke-width="1.2"/>
-              <line x1="68" y1="36" x2="40" y2="10" stroke="var(--border)" stroke-width="1.2"/>
-              <line x1="40" y1="10" x2="12" y2="36" stroke="var(--border)" stroke-width="1.2"/>
-              <line x1="12" y1="36" x2="40" y2="62" stroke="var(--border)" stroke-width="1.2"/>
-              <polygon points="34,60 46,60 43,66 40,68 37,66" fill="var(--surface2)" stroke="var(--border)" stroke-width="1.5"/>
-              <polygon id="lb-3B" class="live-base-poly" points="12,27 21,36 12,45 3,36" fill="var(--surface2)" stroke="var(--border)" stroke-width="2" onclick="liveRunnerAction('3B')"/>
-              <polygon id="lb-2B" class="live-base-poly" points="40,1 49,10 40,19 31,10" fill="var(--surface2)" stroke="var(--border)" stroke-width="2" onclick="liveRunnerAction('2B')"/>
-              <polygon id="lb-1B" class="live-base-poly" points="68,27 77,36 68,45 59,36" fill="var(--surface2)" stroke="var(--border)" stroke-width="2" onclick="liveRunnerAction('1B')"/>
-              <text id="lb-1B-txt" x="68" y="40" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
-              <text id="lb-2B-txt" x="40" y="14" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
-              <text id="lb-3B-txt" x="12" y="40" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
-            </svg>
-            <div id="live-bases-names" style="margin-top:4px;width:80px;margin-left:auto;margin-right:auto;min-height:14px"></div>
+            <div style="display:flex;align-items:center;gap:8px;justify-content:center">
+              <svg class="live-bases-svg" viewBox="0 0 80 68" width="76" height="64">
+                <line x1="40" y1="62" x2="68" y2="36" stroke="var(--border)" stroke-width="1.2"/>
+                <line x1="68" y1="36" x2="40" y2="10" stroke="var(--border)" stroke-width="1.2"/>
+                <line x1="40" y1="10" x2="12" y2="36" stroke="var(--border)" stroke-width="1.2"/>
+                <line x1="12" y1="36" x2="40" y2="62" stroke="var(--border)" stroke-width="1.2"/>
+                <polygon points="34,60 46,60 43,66 40,68 37,66" fill="var(--surface2)" stroke="var(--border)" stroke-width="1.5"/>
+                <polygon id="lb-3B" class="live-base-poly" points="12,27 21,36 12,45 3,36" fill="var(--surface2)" stroke="var(--border)" stroke-width="2" onclick="liveRunnerAction('3B')"/>
+                <polygon id="lb-2B" class="live-base-poly" points="40,1 49,10 40,19 31,10" fill="var(--surface2)" stroke="var(--border)" stroke-width="2" onclick="liveRunnerAction('2B')"/>
+                <polygon id="lb-1B" class="live-base-poly" points="68,27 77,36 68,45 59,36" fill="var(--surface2)" stroke="var(--border)" stroke-width="2" onclick="liveRunnerAction('1B')"/>
+                <text id="lb-1B-txt" x="68" y="40" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
+                <text id="lb-2B-txt" x="40" y="14" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
+                <text id="lb-3B-txt" x="12" y="40" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="900" pointer-events="none"></text>
+              </svg>
+              <div id="live-bases-names" style="font-size:.62rem;font-weight:700;line-height:1.9;text-align:left;min-width:64px"></div>
+            </div>
             <div style="display:flex;gap:4px;margin-top:3px">
               <button class="live-half-btn" onclick="liveUndo()" id="live-undo-half-btn" style="opacity:.5" title="Undo last action">↩</button>
               <button class="live-half-btn" onclick="liveNextInning()">End Half ▶</button>
@@ -4524,9 +4527,12 @@ function renderLiveBases() {
       poly.style.stroke = pid ? 'var(--accent)' : 'var(--border)';
     }
     if (txt) txt.textContent = p ? ('#' + (p.jersey || '?')) : '';
+    const lbl = `<span style="color:var(--muted)">${base}:</span>`;
     if (pid && p) {
       const last = p.name.split(' ').pop();
-      listLines.push(`<div style="color:var(--gold);white-space:nowrap">${base}: <span style="color:var(--text)">#${p.jersey||'?'} ${last}</span></div>`);
+      listLines.push(`<div style="white-space:nowrap">${lbl} <span style="color:var(--gold)">#${p.jersey||'?'} ${last}</span></div>`);
+    } else {
+      listLines.push(`<div style="white-space:nowrap;opacity:.35">${lbl}</div>`);
     }
   });
   const nameDiv = document.getElementById('live-bases-names');
@@ -6194,7 +6200,7 @@ function _publishLiveGame() {
     const parts = (p.name||'').trim().split(/\s+/);
     const first = parts[0]||''; const last = parts.slice(1).join(' ');
     const display = last ? `${first[0].toUpperCase()}. ${last}` : first;
-    return { fmtName:`${display} #${p.jersey||'?'}`, jersey:p.jersey||'?' };
+    return { fmtName:`${display} #${p.jersey||'?'}`, jersey:p.jersey||'?', lastName:last||first };
   };
   const resolvePid = pid => {
     if(!pid)return null; const p=S.players.find(x=>x.id===pid);
@@ -6507,13 +6513,22 @@ function renderSpectatorView(data) {
   const bases = data.bases||{};
   _animateSpecRunners(_specPrevBases, bases, color);
   _specPrevBases = JSON.parse(JSON.stringify(bases));
-  ['1B','2B','3B'].forEach(b => {
+  const specNameLines = [];
+  ['3B','2B','1B'].forEach(b => {
     const info = bases[b];
     const poly = document.getElementById('sd-'+b);
     const txt  = document.getElementById('sd-'+b+'-txt');
     if (poly) { poly.style.fill=info?color:'var(--surface2)'; poly.style.stroke=info?color:'var(--border)'; }
     if (txt)    txt.textContent = info ? ('#'+info.jersey) : '';
+    const lbl = `<span style="color:var(--muted)">${b}:</span>`;
+    if (info) {
+      specNameLines.push(`<div style="white-space:nowrap">${lbl} <span style="color:var(--gold)">#${info.jersey} ${info.lastName||''}</span></div>`);
+    } else {
+      specNameLines.push(`<div style="white-space:nowrap;opacity:.35">${lbl}</div>`);
+    }
   });
+  const specNameDiv = document.getElementById('spec-bases-names');
+  if (specNameDiv) specNameDiv.innerHTML = specNameLines.join('');
 
   // Weather strip
   const wxBar = document.getElementById('spec-wx-bar');
