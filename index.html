@@ -826,6 +826,12 @@ main{padding:16px;max-width:860px;margin:0 auto}
       <div class="spec-team-score" id="spec-them-score">0</div>
     </div>
   </div>
+  <div id="spec-wx-bar" style="display:none;background:#0c0c0c;border-bottom:1px solid var(--border);padding:5px 14px;font-size:.72rem;color:var(--muted);display:none;align-items:center;gap:8px">
+    <span id="spec-wx-icon">🌡</span>
+    <span id="spec-wx-temp" style="color:var(--text);font-weight:700"></span>
+    <span id="spec-wx-label"></span>
+    <span id="spec-wx-loc" style="margin-left:auto;font-size:.62rem"></span>
+  </div>
   <div class="spec-diamond-wrap">
     <svg id="spec-diamond-svg" viewBox="0 0 80 68" width="180" height="153" style="overflow:visible">
       <line x1="40" y1="62" x2="68" y2="36" stroke="var(--border)" stroke-width="1.2"/>
@@ -5003,14 +5009,20 @@ function liveAB(label, cls) {
   });
 
   // Trigger end of half if 3 outs reached
-  if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); }
+  const halfEnded = gdLiveState.outs >= 3;
+  if (halfEnded) { gdLiveState.outs = 0; liveNextHalf(); }
 
   _liveResetCount();
-  renderLiveAB();
-  renderLiveLineup();
-  renderLiveBases();
-  renderLiveInning();
-  if (_gdWeAreBatting()) renderLiveNextUp();
+  if (halfEnded) {
+    renderLiveMode(); // comprehensive — clears bases, flips mode badge, switches tab
+  } else {
+    renderLiveAB();
+    renderLiveLineup();
+    renderLiveBases();
+    renderLiveInning();
+    _updateLiveHalfMode();
+    if (_gdWeAreBatting()) renderLiveNextUp();
+  }
   _showPostPlay(entry, label);
   gdSaveState();
   _publishLiveGame();
@@ -6225,6 +6237,7 @@ function _publishLiveGame() {
     pitcher:  pit?{fmtName:(_fmtPub(pit)||{}).fmtName,jersey:pit.jersey||'?',thrown,limit:R.pitchLimit||85,era:_fmt2(pit.era)}:null,
     log:      fmtLog,
     count:    gdLiveState.count || {balls:0, strikes:0},
+    weather:  _liveWxData || null,
     isLive:   true,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(e=>console.warn('Publish live:',e));
@@ -6318,27 +6331,39 @@ async function _injectScheduleWeather() {
   }
 }
 
+let _liveWxData = null;
+
 async function _fetchLiveWeather(gameId) {
   const g    = S.games?.find(x => x.id === gameId);
   const addr = g?.field;
   const bar  = document.getElementById('live-wx-bar');
-  if (!bar) return;
-  if (!addr) { bar.style.display = 'none'; return; }
 
-  bar.style.display = 'flex';
-  document.getElementById('live-wx-temp').textContent  = '…';
-  document.getElementById('live-wx-label').textContent = '';
-  document.getElementById('live-wx-loc').textContent   = addr.split(',')[0];
+  _liveWxData = null;
+  if (!addr) { if (bar) bar.style.display = 'none'; return; }
+
+  if (bar) {
+    bar.style.display = 'flex';
+    document.getElementById('live-wx-temp').textContent  = '…';
+    document.getElementById('live-wx-label').textContent = '';
+    document.getElementById('live-wx-loc').textContent   = addr.split(',')[0];
+  }
 
   const coords = await _geocode(addr);
-  if (!coords) { bar.style.display = 'none'; return; }
+  if (!coords) { if (bar) bar.style.display = 'none'; return; }
   const wx = await _fetchCurrentWx(coords.lat, coords.lon);
-  if (!wx)  { bar.style.display = 'none'; return; }
+  if (!wx)  { if (bar) bar.style.display = 'none'; return; }
 
   const { icon, label } = _wxInfo(wx.weathercode);
-  document.getElementById('live-wx-icon').textContent  = icon;
-  document.getElementById('live-wx-temp').textContent  = Math.round(wx.temperature) + '°F';
-  document.getElementById('live-wx-label').textContent = label;
+  _liveWxData = { icon, temp: Math.round(wx.temperature), label, loc: addr.split(',')[0] };
+
+  if (bar) {
+    document.getElementById('live-wx-icon').textContent  = icon;
+    document.getElementById('live-wx-temp').textContent  = _liveWxData.temp + '°F';
+    document.getElementById('live-wx-label').textContent = label;
+  }
+
+  // Re-publish so spectators get the weather update
+  _publishLiveGame();
 }
 
 function _publishTeamPage() {
@@ -6492,6 +6517,20 @@ function renderSpectatorView(data) {
     if (poly) { poly.style.fill=info?color:'var(--surface2)'; poly.style.stroke=info?color:'var(--border)'; }
     if (txt)    txt.textContent = info ? ('#'+info.jersey) : '';
   });
+
+  // Weather strip
+  const wxBar = document.getElementById('spec-wx-bar');
+  if (wxBar) {
+    if (data.weather) {
+      wxBar.style.display = 'flex';
+      document.getElementById('spec-wx-icon').textContent  = data.weather.icon  || '🌡';
+      document.getElementById('spec-wx-temp').textContent  = (data.weather.temp || '—') + '°F';
+      document.getElementById('spec-wx-label').textContent = data.weather.label || '';
+      document.getElementById('spec-wx-loc').textContent   = data.weather.loc   || '';
+    } else {
+      wxBar.style.display = 'none';
+    }
+  }
 
   // Home/away determines which team bats when
   // Visiting team bats top (▲); home team bats bottom (▼)
