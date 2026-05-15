@@ -2627,8 +2627,8 @@ function _gmInitMap(lat, lon) {
   if (_gmMap) { _gmMap.remove(); _gmMap = null; _gmMarker = null; }
   _gmPinLatLon = { lat, lon };
   _gmMap = L.map('gm-map', { zoomControl: true }).setView([lat, lon], 16);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>',
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
     maxZoom: 19
   }).addTo(_gmMap);
   _gmMarker = L.marker([lat, lon], { draggable: true }).addTo(_gmMap);
@@ -3983,8 +3983,8 @@ function _sfInitMap(lat, lon) {
   if (_sfMap) { _sfMap.remove(); _sfMap = null; _sfMarker = null; }
   _sfPinLatLon = { lat, lon };
   _sfMap = L.map('set-hf-map').setView([lat, lon], 16);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>',
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
     maxZoom: 19
   }).addTo(_sfMap);
   _sfMarker = L.marker([lat, lon], { draggable: true }).addTo(_sfMap);
