@@ -1528,9 +1528,21 @@ main{padding:16px;max-width:860px;margin:0 auto}
         </div>
         <div class="fg" style="margin-bottom:6px">
           <label>Home Field / Address</label>
-          <input id="set-homefield" placeholder="e.g. Conestoga Valley Park, 100 Main St, Lancaster PA" oninput="saveHomeField()" />
-          <div style="font-size:.68rem;color:var(--muted);margin-top:4px">Auto-fills the field address when you add a home game to the schedule.</div>
+          <input id="set-homefield" placeholder="e.g. Conestoga Valley Park, 100 Main St, Lancaster PA" oninput="sfFieldUpdated()" />
         </div>
+        <div id="set-hf-map-wrap" style="display:none;margin-bottom:8px">
+          <div id="set-hf-map" style="height:200px;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden"></div>
+          <div style="font-size:.62rem;color:var(--muted);margin-top:5px">Drag pin to set exact location — saved as default for home games.</div>
+        </div>
+        <div class="fg" style="margin-bottom:8px">
+          <label>Home Field Notes <span style="font-weight:500;color:var(--muted)">(optional)</span></label>
+          <textarea id="set-hf-notes" rows="2" placeholder="e.g. Field #2 — entrance off Oak St, park in Lot B" style="resize:vertical;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);padding:8px;font-size:.85rem;font-family:inherit"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <button class="btn btn-primary btn-sm" onclick="saveHomeField()">Save Home Field</button>
+          <button class="btn btn-outline btn-sm" onclick="updateAllHomeGames()">↺ Update all Home Games</button>
+        </div>
+        <div style="font-size:.68rem;color:var(--muted);margin-bottom:4px">Auto-fills field and notes when you add a home game. "Update all" pushes the current address, notes, and pin to every existing home game.</div>
         <!-- Inline quick-color swatches -->
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <div style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Quick Colors:</div>
@@ -2672,7 +2684,7 @@ function openGameModal(id) {
     el('gm-loc').value = 'Home';
     el('gm-field').value = S.homeField || '';
     el('gm-field-hint').style.display = S.homeField ? 'block' : 'none';
-    el('gm-notes').value = '';
+    el('gm-notes').value = S.homeFieldNotes || '';
     el('gm-opp-code').value = '';
     el('gm-opp-code-status').textContent = '';
     el('gm-delete-btn').style.display='none';
@@ -2700,13 +2712,19 @@ function openGameModal(id) {
 function gmLocChanged() {
   const loc   = document.getElementById('gm-loc').value;
   const field = document.getElementById('gm-field');
+  const notes = document.getElementById('gm-notes');
   const hint  = document.getElementById('gm-field-hint');
   if (loc === 'Home' && S.homeField && !field.value.trim()) {
     field.value = S.homeField;
     hint.style.display = 'block';
+    if (!notes.value.trim() && S.homeFieldNotes) notes.value = S.homeFieldNotes;
+    gmFieldUpdated();
   } else if (loc === 'Away' && field.value.trim() === S.homeField) {
     field.value = '';
+    notes.value = '';
     hint.style.display = 'none';
+    document.getElementById('gm-map-wrap').style.display = 'none';
+    _gmPinLatLon = null;
   } else {
     hint.style.display = (loc === 'Home' && S.homeField && field.value.trim() === S.homeField) ? 'block' : 'none';
   }
@@ -3954,20 +3972,103 @@ function renderTeamStats() {
 // ============================================================
 // SETTINGS
 // ============================================================
+let _sfMap = null, _sfMarker = null, _sfPinLatLon = null, _sfFieldTimer = null;
+
+function _sfInitMap(lat, lon) {
+  if (!window.L) return;
+  const wrap = document.getElementById('set-hf-map-wrap');
+  const container = document.getElementById('set-hf-map');
+  if (!wrap || !container) return;
+  wrap.style.display = 'block';
+  if (_sfMap) { _sfMap.remove(); _sfMap = null; _sfMarker = null; }
+  _sfPinLatLon = { lat, lon };
+  _sfMap = L.map('set-hf-map').setView([lat, lon], 16);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 19
+  }).addTo(_sfMap);
+  _sfMarker = L.marker([lat, lon], { draggable: true }).addTo(_sfMap);
+  _sfMarker.on('dragend', e => {
+    const p = e.target.getLatLng();
+    _sfPinLatLon = { lat: p.lat, lon: p.lng };
+  });
+  setTimeout(() => _sfMap && _sfMap.invalidateSize(), 150);
+}
+
+function sfFieldUpdated() {
+  clearTimeout(_sfFieldTimer);
+  const addr = document.getElementById('set-homefield').value.trim();
+  if (!addr) {
+    document.getElementById('set-hf-map-wrap').style.display = 'none';
+    _sfPinLatLon = null;
+    return;
+  }
+  _sfFieldTimer = setTimeout(async () => {
+    const coords = await _geocode(addr);
+    if (!coords) return;
+    if (_sfMap) {
+      _sfMap.setView([coords.lat, coords.lon], 16);
+      _sfMarker.setLatLng([coords.lat, coords.lon]);
+      _sfPinLatLon = { lat: coords.lat, lon: coords.lon };
+    } else {
+      _sfInitMap(coords.lat, coords.lon);
+    }
+  }, 700);
+}
+
 function renderSettings() {
   document.getElementById('set-team-info').innerHTML =
     `<b>${S.name}</b> &nbsp;·&nbsp; ${S.division} &nbsp;·&nbsp; ${S.season} season`;
-  document.getElementById('qs-color1').value  = S.colors?.primary   || '#e4002b';
-  document.getElementById('qs-color2').value  = S.colors?.secondary || '#ffffff';
-  document.getElementById('set-homefield').value = S.homeField || '';
+  document.getElementById('qs-color1').value    = S.colors?.primary    || '#e4002b';
+  document.getElementById('qs-color2').value    = S.colors?.secondary  || '#ffffff';
+  document.getElementById('set-homefield').value = S.homeField  || '';
+  document.getElementById('set-hf-notes').value  = S.homeFieldNotes || '';
+  // Reset settings map, then init at saved pin or geocode the address
+  if (_sfMap) { _sfMap.remove(); _sfMap = null; _sfMarker = null; }
+  _sfPinLatLon = S.homeFieldPin || null;
+  document.getElementById('set-hf-map-wrap').style.display = 'none';
+  if (S.homeField) {
+    setTimeout(async () => {
+      if (S.homeFieldPin) {
+        _sfInitMap(S.homeFieldPin.lat, S.homeFieldPin.lon);
+      } else {
+        const coords = await _geocode(S.homeField);
+        if (coords) _sfInitMap(coords.lat, coords.lon);
+      }
+    }, 80);
+  }
   renderRulesBox();
   renderImgLibrary();
 }
 
 function saveHomeField() {
   if (!S) return;
-  S.homeField = document.getElementById('set-homefield').value.trim();
+  S.homeField      = document.getElementById('set-homefield').value.trim();
+  S.homeFieldNotes = document.getElementById('set-hf-notes').value.trim();
+  S.homeFieldPin   = _sfPinLatLon || null;
   save();
+  const btn = event?.target;
+  if (btn) { const orig = btn.textContent; btn.textContent = '✓ Saved'; setTimeout(() => btn.textContent = orig, 1500); }
+}
+
+function updateAllHomeGames() {
+  if (!S) return;
+  const addr  = S.homeField      || '';
+  const notes = S.homeFieldNotes || '';
+  const pin   = S.homeFieldPin   || null;
+  let count = 0;
+  (S.games || []).forEach(g => {
+    if (g.location === 'Home') {
+      if (addr)  g.field = addr;
+      g.notes    = notes;
+      g.pinLatLon = pin;
+      count++;
+    }
+  });
+  save();
+  renderSchedule();
+  const btn = event?.target;
+  if (btn) { const orig = btn.textContent; btn.textContent = `✓ Updated ${count} game${count!==1?'s':''}`;  setTimeout(() => btn.textContent = orig, 2000); }
 }
 
 function quickColor() {
