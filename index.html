@@ -295,6 +295,20 @@ main{padding:16px;max-width:860px;margin:0 auto}
 .pp-score-btn:active{background:var(--surface)}
 .pp-score-btn:disabled{opacity:.45}
 .pp-done-btn{width:100%;background:var(--accent);border:none;color:#fff;padding:13px;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:900;letter-spacing:.4px;margin-top:4px}
+/* ── Ball/Strike count strip ── */
+.live-count-strip{display:flex;align-items:center;gap:0;background:#000;border:1px solid var(--border);border-radius:var(--radius);margin:10px 0;overflow:hidden}
+.live-count-num{flex:1;text-align:center;padding:10px 4px;border-right:1px solid var(--border)}
+.live-count-num:last-of-type{border-right:none}
+.live-count-big{font-size:2rem;font-weight:900;line-height:1;letter-spacing:-1px}
+.live-count-lbl{font-size:.5rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:2px}
+.live-pitch-row{display:flex;gap:6px;margin-bottom:6px}
+.live-pitch-btn{flex:1;padding:11px 4px;border-radius:4px;border:none;font-size:.75rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;transition:all .12s}
+.live-pitch-btn.ball-btn{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.4);color:var(--gold2)}
+.live-pitch-btn.ball-btn:active{background:rgba(201,168,76,.28)}
+.live-pitch-btn.foul-btn{background:rgba(136,136,136,.1);border:1px solid var(--border);color:var(--muted)}
+.live-pitch-btn.foul-btn:active{background:rgba(136,136,136,.25)}
+.live-pitch-btn.strike-btn{background:rgba(228,0,43,.1);border:1px solid rgba(228,0,43,.4);color:#ff6680}
+.live-pitch-btn.strike-btn:active{background:rgba(228,0,43,.24)}
 /* ── Dedicated runner modal ── */
 .runner-modal{position:fixed;inset:0;z-index:2100;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .18s}
 .runner-modal.open{opacity:1;pointer-events:auto}
@@ -838,6 +852,17 @@ main{padding:16px;max-width:860px;margin:0 auto}
       <div class="spec-strip-lbl">⚾ At Bat</div>
       <div class="spec-strip-name" id="spec-atbat-name">—</div>
       <div class="spec-strip-sub" id="spec-atbat-sub"></div>
+      <div id="spec-count-row" style="display:none;margin-top:8px;display:flex;gap:12px;justify-content:center">
+        <div style="text-align:center">
+          <div id="spec-count-balls" style="font-size:1.6rem;font-weight:900;color:var(--gold2);line-height:1">0</div>
+          <div style="font-size:.5rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:1px">Balls</div>
+        </div>
+        <div style="font-size:1.4rem;color:var(--border);align-self:center">–</div>
+        <div style="text-align:center">
+          <div id="spec-count-strikes" style="font-size:1.6rem;font-weight:900;color:#ff6680;line-height:1">0</div>
+          <div style="font-size:.5rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-top:1px">Strikes</div>
+        </div>
+      </div>
     </div>
     <div class="spec-nextup-row">
       <div class="spec-strip">
@@ -1246,6 +1271,7 @@ main{padding:16px;max-width:860px;margin:0 auto}
           <div class="live-mid">
             <div class="live-inning-badge" id="live-inning-lbl">▲ 1st</div>
             <div id="live-mode-badge" style="font-size:.55rem;font-weight:900;text-transform:uppercase;letter-spacing:1px;padding:2px 8px;border-radius:2px;margin:3px auto 0;display:inline-block;background:rgba(0,165,80,.15);color:#00d466;border:1px solid rgba(0,165,80,.3)">BATTING</div>
+            <div id="live-bs-lbl" style="font-size:.72rem;font-weight:900;color:var(--muted);letter-spacing:.5px;margin-top:2px">0 - 0</div>
             <div class="live-outs">
               <div class="live-out-dot" id="live-out0" onclick="liveOuts(0)" title="Out 1"></div>
               <div class="live-out-dot" id="live-out1" onclick="liveOuts(1)" title="Out 2"></div>
@@ -2875,6 +2901,8 @@ function gdRestoreState() {
           gdLiveState = st.liveState;
           gdLiveState.bases      = gdLiveState.bases      || {'1B':null,'2B':null,'3B':null};
           gdLiveState.basesOwner = gdLiveState.basesOwner || {'1B':null,'2B':null,'3B':null};
+          gdLiveState.count      = gdLiveState.count      || {balls:0, strikes:0};
+          gdLiveState.pitcherBS  = gdLiveState.pitcherBS  || {};
         }
         const g2 = S.games.find(x=>x.id===sel.value);
         document.getElementById('live-us-lbl').textContent   = (S.name||'US').toUpperCase().slice(0,8);
@@ -4353,9 +4381,10 @@ function gdStartLive() {
   document.getElementById('live-them-lbl').textContent = g ? (g.opponent||'THEM').toUpperCase().slice(0,8) : 'THEM';
   const isHome = !(g?.location||'Home').toLowerCase().includes('away');
   gdLiveState = { usScore:0, themScore:0, inning:1, topBottom:'top', outs:0,
-                  batterIdx:0, pitchCounts:{}, subs:{}, fieldSubs:{}, lastResult:{}, log:[],
+                  batterIdx:0, pitchCounts:{}, pitcherBS:{}, subs:{}, fieldSubs:{}, lastResult:{}, log:[],
                   pulledPitchers:[], bases:{'1B':null,'2B':null,'3B':null}, stats:{},
-                  basesOwner:{'1B':null,'2B':null,'3B':null}, isHome };
+                  basesOwner:{'1B':null,'2B':null,'3B':null}, isHome,
+                  count:{balls:0, strikes:0} };
   _liveTab = 'lineup';
   _oppLiveData = null;
   _subscribeOpponent(g?.opponentCode||null);
@@ -4497,6 +4526,9 @@ function renderLiveAB() {
     {label:'E',cls:'out'},{label:'CI',cls:'neutral'},
   ];
 
+  const count   = gdLiveState.count || {balls:0, strikes:0};
+  const pitchPid = gdFieldAssign && gdFieldAssign['P'];
+  const gameP    = gdLiveState.pitchCounts && pitchPid ? (gdLiveState.pitchCounts[pitchPid]||0) : 0;
   card.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <span style="font-size:.58rem;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)">At Bat — ${idx+1} of ${gdLineup.length}</span>
@@ -4511,6 +4543,25 @@ function renderLiveAB() {
         ${lastRes?`<div style="margin-top:5px"><span class="badge ${lastRes.cls}">${lastRes.label} last result</span></div>`:''}
       </div>
       <button class="live-change-btn" onclick="liveSubBatterModal(${idx})" style="align-self:flex-start">Sub ↕</button>
+    </div>
+    <div class="live-count-strip">
+      <div class="live-count-num">
+        <div class="live-count-big" style="color:var(--gold2)">${count.balls}</div>
+        <div class="live-count-lbl">Balls</div>
+      </div>
+      <div class="live-count-num">
+        <div class="live-count-big" style="color:#ff6680">${count.strikes}</div>
+        <div class="live-count-lbl">Strikes</div>
+      </div>
+      <div class="live-count-num" style="border-right:none">
+        <div class="live-count-big" style="color:var(--muted);font-size:1.4rem">${gameP}</div>
+        <div class="live-count-lbl">Pitches</div>
+      </div>
+    </div>
+    <div class="live-pitch-row">
+      <button class="live-pitch-btn ball-btn" onclick="livePitch('ball')">⬤ Ball</button>
+      <button class="live-pitch-btn foul-btn" onclick="livePitch('foul')">Foul</button>
+      <button class="live-pitch-btn strike-btn" onclick="livePitch('strike')">Strike ✕</button>
     </div>
     <div class="live-outcome-grid" style="margin-bottom:6px">
       ${MAIN.map(o=>`<button class="live-ab-btn ${o.cls}" onclick="liveAB('${o.label}','${o.cls}')">${o.label}</button>`).join('')}
@@ -4544,6 +4595,7 @@ function renderLivePitcher() {
     return;
   }
   const thrown    = gdLiveState.pitchCounts[pitcher.id] || 0;
+  const bs        = (gdLiveState.pitcherBS && gdLiveState.pitcherBS[pitcher.id]) || {b:0, s:0, f:0};
   const limit     = R.pitchLimit;
   const pct       = Math.min(100, thrown / limit * 100);
   const color     = pct<60?'var(--ok)':pct<85?'var(--warn)':'var(--danger)';
@@ -4554,11 +4606,14 @@ function renderLivePitcher() {
       <div class="live-pitch-info">
         <div class="live-pitch-name">#${pitcher.jersey} ${pitcher.name} <span style="font-size:.62rem;color:var(--muted);font-weight:600">P</span></div>
         <div class="live-pitch-bar"><div class="live-pitch-fill" style="width:${pct}%;background:${color}"></div></div>
-        <div class="live-pitch-count" style="color:${color}">${thrown} pitches · ${remaining} left</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:2px">
+          <span class="live-pitch-count" style="color:${color}">${thrown} pitches · ${remaining} left</span>
+          <span style="font-size:.6rem;color:var(--muted)">${bs.b}B · ${bs.s}K · ${bs.f}F</span>
+        </div>
       </div>
       <div class="live-pitch-btns">
-        <button onclick="liveAddPitch(1)" style="background:var(--accent);border:none;color:#fff;width:38px;height:38px;border-radius:4px;cursor:pointer;font-size:1.1rem;font-weight:900;box-shadow:0 2px 8px rgba(228,0,43,.25)">+</button>
-        <button onclick="liveAddPitch(-1)" style="background:none;border:1px solid var(--border);color:var(--muted);width:38px;height:20px;border-radius:3px;cursor:pointer;font-size:.7rem;line-height:1">−</button>
+        <button onclick="liveAddPitch(1)" title="Manual +1 pitch correction" style="background:none;border:1px solid var(--border);color:var(--muted);width:38px;height:28px;border-radius:3px;cursor:pointer;font-size:.8rem;font-weight:900;line-height:1">+</button>
+        <button onclick="liveAddPitch(-1)" title="Manual −1 pitch correction" style="background:none;border:1px solid var(--border);color:var(--muted);width:38px;height:20px;border-radius:3px;cursor:pointer;font-size:.7rem;line-height:1">−</button>
       </div>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
@@ -4634,7 +4689,7 @@ function liveScore(team, delta) {
 function liveOuts(clicked) {
   const cur = gdLiveState.outs;
   gdLiveState.outs = (clicked + 1 === cur) ? 0 : clicked + 1;
-  if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); }
+  if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); renderLiveMode(); return; }
   renderLiveInning();
 }
 
@@ -4647,7 +4702,8 @@ function liveNextHalf() {
   gdLiveState.basesOwner = {'1B':null,'2B':null,'3B':null};
   if (gdLiveState.topBottom === 'top') { gdLiveState.topBottom = 'bot'; }
   else { gdLiveState.topBottom = 'top'; gdLiveState.inning = Math.min(gdLiveState.inning + 1, 7); }
-  gdLiveState.outs = 0;
+  gdLiveState.outs  = 0;
+  gdLiveState.count = {balls:0, strikes:0};
   gdSaveState();
   _publishLiveGame();
 }
@@ -4696,7 +4752,102 @@ function liveAddPitch(n) {
   if (!pid) return;
   gdLiveState.pitchCounts[pid] = Math.max(0, (gdLiveState.pitchCounts[pid]||0) + n);
   renderLivePitcher();
+  renderLiveAB();
   _publishLiveGame();
+}
+
+function _liveResetCount() {
+  gdLiveState.count = {balls:0, strikes:0};
+  const el = document.getElementById('live-bs-lbl');
+  if (el) el.textContent = '0 - 0';
+}
+
+function livePitch(type) {
+  const count = gdLiveState.count = gdLiveState.count || {balls:0, strikes:0};
+  const pid   = gdFieldAssign && gdFieldAssign['P'];
+
+  // Increment pitcher total pitch count
+  if (pid) {
+    gdLiveState.pitchCounts = gdLiveState.pitchCounts || {};
+    gdLiveState.pitchCounts[pid] = (gdLiveState.pitchCounts[pid]||0) + 1;
+    // Track balls/strikes per pitcher for stats
+    gdLiveState.pitcherBS = gdLiveState.pitcherBS || {};
+    gdLiveState.pitcherBS[pid] = gdLiveState.pitcherBS[pid] || {b:0,s:0,f:0};
+    if (type === 'ball')   gdLiveState.pitcherBS[pid].b++;
+    else if (type === 'strike') gdLiveState.pitcherBS[pid].s++;
+    else if (type === 'foul')   gdLiveState.pitcherBS[pid].f++;
+  }
+
+  if (type === 'ball') {
+    count.balls++;
+    if (count.balls >= 4) {
+      _liveResetCount();
+      liveAB('BB', 'walk');
+      return;
+    }
+  } else if (type === 'strike') {
+    count.strikes++;
+    if (count.strikes >= 3) {
+      _liveDroppedThird();
+      return;
+    }
+  } else if (type === 'foul') {
+    // Foul only adds a strike when below 2; can't strikeout on a foul
+    if (count.strikes < 2) count.strikes++;
+  }
+
+  // Update scoreboard count label
+  const el = document.getElementById('live-bs-lbl');
+  if (el) el.textContent = `${count.balls} - ${count.strikes}`;
+
+  renderLiveAB();
+  renderLivePitcher();
+  gdSaveState();
+  _publishLiveGame();
+}
+
+function _liveDroppedThird() {
+  const bases   = gdLiveState.bases || {};
+  const twoOuts = gdLiveState.outs === 2;
+  // Dropped third is live when: no runner on 1B, OR 2 outs (regardless of 1B)
+  const livePlay = !bases['1B'] || twoOuts;
+
+  if (!livePlay) {
+    // Runner on 1B, fewer than 2 outs → automatic K, ball is dead
+    _liveResetCount();
+    liveAB('K', 'out');
+    return;
+  }
+
+  // Show inline confirm in the at-bat card area
+  const card = document.getElementById('live-ab-card');
+  if (!card) { _liveResetCount(); liveAB('K', 'out'); return; }
+  card.innerHTML = `
+    <div style="text-align:center;padding:8px 0 4px">
+      <div style="font-size:1.1rem;font-weight:900;margin-bottom:6px">⚡ Dropped 3rd Strike</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:18px">Ball is live — did the batter reach 1B safely?</div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="_resolveDroppedThird(true)"
+          style="flex:1;max-width:160px;padding:14px;border-radius:6px;background:rgba(0,165,80,.15);border:1px solid rgba(0,165,80,.4);color:#00d466;font-size:.85rem;font-weight:900;cursor:pointer;letter-spacing:.3px">
+          ✓ Safe at 1B
+        </button>
+        <button onclick="_resolveDroppedThird(false)"
+          style="flex:1;max-width:160px;padding:14px;border-radius:6px;background:rgba(228,0,43,.12);border:1px solid rgba(228,0,43,.4);color:#ff6680;font-size:.85rem;font-weight:900;cursor:pointer;letter-spacing:.3px">
+          ✕ Batter Out (K)
+        </button>
+      </div>
+    </div>`;
+}
+
+function _resolveDroppedThird(safe) {
+  _liveResetCount();
+  if (safe) {
+    // Batter reaches on dropped third — records as reach via dropped K
+    // Treat exactly like ROE for base placement; no out added
+    liveAB('K-DS', 'walk');
+  } else {
+    liveAB('K', 'out');
+  }
 }
 
 const BALL_IN_PLAY = new Set(['1B','2B','3B','HR','GO','FO','LO','DP','FC','ROE','E','Sac','SF','CI']);
@@ -4792,8 +4943,10 @@ function liveAB(label, cls) {
     const runs = _placeHitter(bases, '3B', batterId);
     _liveStat(batterId, 'rbi', runs);
     gdLiveState.usScore += runs;
-  } else if (label === 'ROE' || label === 'FC' || label === 'CI') {
+  } else if (label === 'ROE' || label === 'FC' || label === 'CI' || label === 'K-DS') {
     // Batter reaches 1B; only 1B runner is displaced.
+    // K-DS = dropped third strike, batter safe — records a K for pitcher stats but no out
+    if (label === 'K-DS') _liveStat(batterId, 'k', 1); // K for pitcher, no out
     const runs = _placeHitter(bases, '1B', batterId);
     _liveStat(batterId, 'rbi', runs);
     gdLiveState.usScore += runs;
@@ -4824,6 +4977,7 @@ function liveAB(label, cls) {
   // Trigger end of half if 3 outs reached
   if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); }
 
+  _liveResetCount();
   renderLiveAB();
   renderLiveLineup();
   renderLiveBases();
@@ -5167,7 +5321,7 @@ function liveRunnerOut(fromBase, reason) {
     name:_liveFmtName(_p_out), result:`Out — ${_rsn_out}`, cls:'b-red', detail:''
   });
   closeRunnerModal();
-  if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); }
+  if (gdLiveState.outs >= 3) { gdLiveState.outs = 0; liveNextHalf(); renderLiveMode(); return; }
   renderLiveInning();
   renderLiveBases();
   gdSaveState();
@@ -5253,6 +5407,7 @@ function liveEditLogEntry(idx) {
 
 function liveNextBatter() {
   gdLiveState.batterIdx = (gdLiveState.batterIdx + 1) % (gdLineup.length || 1);
+  _liveResetCount();
   renderLiveAB();
   renderLiveLineup();
 }
@@ -5260,6 +5415,7 @@ function liveNextBatter() {
 function livePrevBatter() {
   const n = gdLineup.length || 1;
   gdLiveState.batterIdx = (gdLiveState.batterIdx - 1 + n) % n;
+  _liveResetCount();
   renderLiveAB();
   renderLiveLineup();
 }
@@ -6036,6 +6192,7 @@ function _publishLiveGame() {
     inHole:   mkNext(2),
     pitcher:  pit?{fmtName:(_fmtPub(pit)||{}).fmtName,jersey:pit.jersey||'?',thrown,limit:R.pitchLimit||85,era:_fmt2(pit.era)}:null,
     log:      fmtLog,
+    count:    gdLiveState.count || {balls:0, strikes:0},
     isLive:   true,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(e=>console.warn('Publish live:',e));
@@ -6228,6 +6385,13 @@ function renderSpectatorView(data) {
       data.onDeck ? data.onDeck.fmtName : '—';
     document.getElementById('spec-hole-name').textContent =
       data.inHole ? data.inHole.fmtName : '—';
+    const countRow = document.getElementById('spec-count-row');
+    const cnt = data.count || {balls:0, strikes:0};
+    if (countRow) {
+      countRow.style.display = 'flex';
+      document.getElementById('spec-count-balls').textContent   = cnt.balls   || 0;
+      document.getElementById('spec-count-strikes').textContent = cnt.strikes || 0;
+    }
   } else {
     battingSec.style.display = 'none';
   }
